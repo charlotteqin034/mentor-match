@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #16161a;
+  --color-muted: #6b6b78;
+  --color-faint: #9a9aa6;
+  --color-line: #e3e1dc;
+  --color-paper: #faf9f7;
+  --color-card: #ffffff;
+  --color-accent: #2f5d50;
+  --color-accent-soft: #eaf1ee;
+  --color-warn: #9a5b1f;
+  --color-warn-soft: #fdf2e4;
+  --color-bad: #9b2c2c;
+  --color-bad-soft: #fbeaea;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-line bg-card;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-line bg-card
+           px-3 py-1.5 text-sm font-medium text-ink transition
+           hover:bg-paper disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .btn-primary {
+    @apply border-accent bg-accent text-white hover:bg-accent/90;
+  }
+
+  .btn-danger {
+    @apply border-bad/30 text-bad hover:bg-bad-soft;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-line bg-card px-3 py-2 text-sm text-ink
+           outline-none placeholder:text-faint focus:border-accent;
+  }
+
+  .label {
+    @apply block text-xs font-semibold uppercase tracking-wide text-muted;
+  }
+
+  .pill {
+    @apply inline-flex items-center rounded-full border border-line px-2 py-0.5 text-xs text-muted;
+  }
+}
+
+/* Scale rows: the 7 radios stay on one line at every width the survey supports,
+   and never squeeze below a comfortable tap target. */
+.scale-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  min-width: 14rem;
+}
