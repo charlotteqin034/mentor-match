@@ -162,7 +162,10 @@ export function TraitSurvey({
           <div className="flex-1">
             <div className="flex items-baseline justify-between text-xs text-muted">
               <span>
-                {answered} of {QUESTIONS.length} answered
+                {/* Their name stays visible the whole way down, so it's always
+                    obvious whose survey this is. */}
+                <span className="font-medium text-ink">{name}</span> · {answered} of{" "}
+                {QUESTIONS.length} answered
               </span>
               {missing.length > 0 && (
                 <span className="text-bad">{missing.length} still need an answer</span>
