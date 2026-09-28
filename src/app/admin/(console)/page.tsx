@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { ConfigError } from "@/components/admin/ConfigError";
 import { GenerateProfilesButton } from "@/components/admin/GenerateProfilesButton";
+import { GenerateShortlistsButton } from "@/components/admin/GenerateShortlistsButton";
 import { RoundBar } from "@/components/admin/RoundBar";
 import { StageControl } from "@/components/admin/StageControl";
 import { getSelectedRound } from "@/lib/admin";
-import { getParticipants, getProfileCards, listRounds } from "@/lib/data";
+import { getParticipants, getProfileCards, getRoundShortlists, listRounds } from "@/lib/data";
 import { env } from "@/lib/env";
+import { RANK_COUNT } from "@/lib/shortlists";
 import type { Participant } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +50,8 @@ export default async function OverviewPage() {
   const bigs = participants.filter((p) => p.role === "big");
   const littles = participants.filter((p) => p.role === "little");
   const cards = await getProfileCards(participants.map((p) => p.id));
+  const shortlists = await getRoundShortlists(round.id);
+  const withShortlist = new Set(shortlists.map((s) => s.participant_id)).size;
 
   const trait = completion(participants, "trait_completed_at");
   const ranking = completion(participants, "ranking_completed_at");
@@ -99,6 +103,25 @@ export default async function OverviewPage() {
             </p>
           </div>
           <GenerateProfilesButton roundId={round.id} />
+        </div>
+      </div>
+
+      <div className="card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="max-w-prose">
+            <h2 className="text-sm font-semibold">Ranking shortlists</h2>
+            <p className="mt-1 text-xs text-muted">
+              Nobody ranks the whole cohort. Each person is offered the handful of profiles
+              that score best against theirs, and puts their top {RANK_COUNT} in order. Build
+              these after the cards, before opening the ranking round.
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              {withShortlist > 0
+                ? `${withShortlist} of ${participants.length} have a shortlist (${shortlists.length} entries).`
+                : "No shortlists yet."}
+            </p>
+          </div>
+          <GenerateShortlistsButton roundId={round.id} />
         </div>
       </div>
 

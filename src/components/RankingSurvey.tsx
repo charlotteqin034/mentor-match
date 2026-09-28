@@ -7,7 +7,6 @@ import type { ProfileCard } from "@/lib/profile-cards";
 
 export type RankableCard = { participant_id: string; card: ProfileCard };
 
-const MAX_RANKS = 8;
 const draftKey = (token: string) => `mm:ranking-draft:${token}`;
 
 export function RankingSurvey({
@@ -56,7 +55,7 @@ export function RankingSurvey({
   const toggle = (id: string) => {
     setShortlist((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (prev.length >= MAX_RANKS) return prev;
+      if (prev.length >= required) return prev; // exactly `required`, no more
       return [...prev, id];
     });
   };
@@ -100,8 +99,9 @@ export function RankingSurvey({
             Your shortlist is in, {name.split(" ")[0]}.
           </h1>
           <p className="mt-3 text-sm text-muted">
-            Rankings are one signal among several, so nothing here is a guarantee — but they do
-            move the needle. You&apos;ll hear who you&apos;ve been paired with from the organiser.
+            Your ranking is one signal among several, so nothing here is a guarantee — but it
+            does move the needle. You&apos;ll hear who you&apos;ve been paired with from the
+            organiser.
           </p>
           <ol className="mt-5 space-y-1 text-sm">
             {shortlist.map((id, i) => (
@@ -119,7 +119,7 @@ export function RankingSurvey({
     );
   }
 
-  const enough = shortlist.length >= required;
+  const enough = shortlist.length === required;
   const otherSide = role === "big" ? "littles" : "bigs";
 
   return (
@@ -129,12 +129,13 @@ export function RankingSurvey({
           {role === "big" ? "Big" : "Little"} · ranking round
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-          Which of these {otherSide} would you want, {name.split(" ")[0]}?
+          Pick your top {required}, {name.split(" ")[0]}.
         </h1>
         <p className="mt-3 text-muted">
-          These are the {otherSide} in this round, anonymised — no names, deliberately. Click
-          to add someone to your shortlist, then drag to put them in order. Pick at least{" "}
-          {required}, up to {MAX_RANKS}.
+          These {cards.length} {otherSide} came out as the closest fits for you, based on what
+          everyone answered. They&apos;re anonymised — no names, deliberately, and they&apos;re
+          in no particular order. Click {required} of them, then drag to put those in the order
+          you&apos;d want them.
         </p>
       </header>
 
@@ -173,9 +174,9 @@ export function RankingSurvey({
         <aside className="lg:sticky lg:top-6 lg:self-start">
           <div className="card p-4">
             <h2 className="text-sm font-semibold">
-              Your shortlist{" "}
+              Your top {required}{" "}
               <span className="font-normal text-muted">
-                ({shortlist.length}/{MAX_RANKS})
+                ({shortlist.length}/{required})
               </span>
             </h2>
 
@@ -236,7 +237,7 @@ export function RankingSurvey({
             <p className="mt-3 text-xs text-muted">
               {enough
                 ? "Ready to submit."
-                : `${required - shortlist.length} more to go before you can submit.`}
+                : `Pick ${required - shortlist.length} more.`}
             </p>
 
             <button

@@ -33,6 +33,7 @@ const { POST: roundRoute } = await import("@/app/api/admin/round/route");
 const { POST: participantsRoute } = await import("@/app/api/admin/participants/route");
 const { POST: traitRoute } = await import("@/app/api/trait-response/route");
 const { POST: profilesRoute } = await import("@/app/api/admin/profiles/route");
+const { POST: shortlistsRoute } = await import("@/app/api/admin/shortlists/route");
 const { POST: rankingsRoute } = await import("@/app/api/rankings/route");
 const { POST: blockedRoute } = await import("@/app/api/admin/blocked/route");
 const { POST: matchRoute } = await import("@/app/api/admin/match/route");
@@ -259,86 +260,108 @@ describe("profile cards", () => {
   });
 });
 
+/** The candidates a given person was offered, in the order the matcher rated them. */
+const offeredTo = (participantId: string) =>
+  (store.tables.shortlists as unknown as { participant_id: string; candidate_id: string; position: number }[])
+    .filter((s) => s.participant_id === participantId)
+    .sort((a, b) => a.position - b.position)
+    .map((s) => s.candidate_id);
+
 describe("rankings", () => {
   async function readyToRank() {
     const roundId = await seedRound();
     await setStage(roundId, "trait_survey");
     await submitAllTraits();
     await profilesRoute(req("/api/admin/profiles", { round_id: roundId }));
+    await shortlistsRoute(req("/api/admin/shortlists", { round_id: roundId }));
     await setStage(roundId, "ranking_survey");
     return roundId;
   }
 
-  it("stores an ordered shortlist and marks the ranker done", async () => {
+  it("offers everyone a shortlist drawn from the other side", async () => {
+    await readyToRank();
+    for (const p of people()) {
+      const offered = offeredTo(p.id);
+      expect(offered.length).toBeGreaterThan(0);
+      expect(offered.length).toBeLessThanOrEqual(5);
+      for (const id of offered) {
+        expect(people().find((x) => x.id === id)!.role).not.toBe(p.role);
+      }
+    }
+  });
+
+  it("stores an ordered top three and marks the ranker done", async () => {
     await readyToRank();
     const big = people().find((p) => p.role === "big")!;
-    const littles = people().filter((p) => p.role === "little");
     const res = await rankingsRoute(
-      req("/api/rankings", {
-        token: big.token,
-        ranked: littles.slice(0, 5).map((p) => p.id),
-      }),
+      req("/api/rankings", { token: big.token, ranked: offeredTo(big.id).slice(0, 3) }),
     );
     expect(res.status).toBe(200);
 
     const stored = store.tables.rankings.filter((r) => r.ranker_id === big.id);
-    expect(stored.map((r) => r.rank).sort()).toEqual([1, 2, 3, 4, 5]);
+    expect(stored.map((r) => r.rank).sort()).toEqual([1, 2, 3]);
     expect(people().find((p) => p.id === big.id)!.ranking_completed_at).toBeTruthy();
   });
 
   it("replaces a previous submission rather than appending to it", async () => {
     await readyToRank();
     const big = people().find((p) => p.role === "big")!;
-    const littles = people().filter((p) => p.role === "little");
-    const body = { token: big.token, ranked: littles.slice(0, 5).map((p) => p.id) };
-    await rankingsRoute(req("/api/rankings", body));
-    await rankingsRoute(
-      req("/api/rankings", {
-        token: big.token,
-        ranked: littles.slice(1, 6).map((p) => p.id),
-      }),
-    );
-    expect(store.tables.rankings.filter((r) => r.ranker_id === big.id)).toHaveLength(5);
+    const offered = offeredTo(big.id);
+    await rankingsRoute(req("/api/rankings", { token: big.token, ranked: offered.slice(0, 3) }));
+    await rankingsRoute(req("/api/rankings", { token: big.token, ranked: offered.slice(1, 4) }));
+    expect(store.tables.rankings.filter((r) => r.ranker_id === big.id)).toHaveLength(3);
   });
 
-  it("rejects a short shortlist, duplicates, and anyone from the ranker's own side", async () => {
+  it("rejects the wrong number of picks, duplicates, and anyone off the shortlist", async () => {
     await readyToRank();
     const big = people().find((p) => p.role === "big")!;
-    const bigs = people().filter((p) => p.role === "big");
+    const offered = offeredTo(big.id);
+    const notOffered = people().find(
+      (p) => p.role === "little" && !offered.includes(p.id),
+    )!;
+
+    const status = async (ranked: string[]) =>
+      (await rankingsRoute(req("/api/rankings", { token: big.token, ranked }))).status;
+
+    expect(await status(offered.slice(0, 2))).toBe(422); // too few
+    expect(await status(offered.slice(0, 4))).toBe(422); // too many
+    expect(await status([offered[0], offered[0], offered[1]])).toBe(422); // duplicate
+    expect(await status([offered[0], offered[1], notOffered.id])).toBe(422); // not offered
+    expect(store.tables.rankings).toHaveLength(0);
+  });
+
+  it("refuses a ranking before shortlists exist", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "trait_survey");
+    await submitAllTraits();
+    await profilesRoute(req("/api/admin/profiles", { round_id: roundId }));
+    await setStage(roundId, "ranking_survey"); // no shortlists generated
+
+    const big = people().find((p) => p.role === "big")!;
     const littles = people().filter((p) => p.role === "little");
+    const res = await rankingsRoute(
+      req("/api/rankings", { token: big.token, ranked: littles.slice(0, 3).map((p) => p.id) }),
+    );
+    expect(res.status).toBe(409);
+  });
 
-    expect(
-      (
-        await rankingsRoute(
-          req("/api/rankings", {
-            token: big.token,
-            ranked: littles.slice(0, 3).map((p) => p.id),
-          }),
-        )
-      ).status,
-    ).toBe(422);
+  it("won't quietly regenerate shortlists once someone has ranked", async () => {
+    const roundId = await readyToRank();
+    const big = people().find((p) => p.role === "big")!;
+    await rankingsRoute(req("/api/rankings", { token: big.token, ranked: offeredTo(big.id).slice(0, 3) }));
 
-    expect(
-      (
-        await rankingsRoute(
-          req("/api/rankings", {
-            token: big.token,
-            ranked: [...littles.slice(0, 4), littles[0]].map((p) => p.id),
-          }),
-        )
-      ).status,
-    ).toBe(422);
+    const refused = await shortlistsRoute(req("/api/admin/shortlists", { round_id: roundId }));
+    expect(refused.status).toBe(409);
+    expect((await json(refused)).needs_force).toBe(true);
+    expect(store.tables.rankings).toHaveLength(3);
 
-    expect(
-      (
-        await rankingsRoute(
-          req("/api/rankings", {
-            token: big.token,
-            ranked: [...littles.slice(0, 4), bigs[1]].map((p) => p.id),
-          }),
-        )
-      ).status,
-    ).toBe(422);
+    const forced = await shortlistsRoute(
+      req("/api/admin/shortlists", { round_id: roundId, force: true }),
+    );
+    expect(forced.status).toBe(200);
+    // Forcing clears the rankings that pointed at the old list.
+    expect(store.tables.rankings).toHaveLength(0);
+    expect(people().find((p) => p.id === big.id)!.ranking_completed_at).toBeNull();
   });
 });
 
@@ -348,25 +371,15 @@ describe("matching, override and publishing", () => {
     await setStage(roundId, "trait_survey");
     await submitAllTraits();
     await profilesRoute(req("/api/admin/profiles", { round_id: roundId }));
+    await shortlistsRoute(req("/api/admin/shortlists", { round_id: roundId }));
     await setStage(roundId, "ranking_survey");
 
     const bigs = people().filter((p) => p.role === "big");
-    const littles = people().filter((p) => p.role === "little");
     // Everyone ranks except the last big — matching must cope with that.
-    for (const [i, big] of bigs.slice(0, -1).entries()) {
+    for (const p of people()) {
+      if (p.id === bigs.at(-1)!.id) continue;
       await rankingsRoute(
-        req("/api/rankings", {
-          token: big.token,
-          ranked: [...littles.slice(i), ...littles.slice(0, i)].slice(0, 5).map((p) => p.id),
-        }),
-      );
-    }
-    for (const [i, little] of littles.entries()) {
-      await rankingsRoute(
-        req("/api/rankings", {
-          token: little.token,
-          ranked: [...bigs.slice(i), ...bigs.slice(0, i)].slice(0, 5).map((p) => p.id),
-        }),
+        req("/api/rankings", { token: p.token, ranked: offeredTo(p.id).slice(0, 3) }),
       );
     }
     await setStage(roundId, "matching");

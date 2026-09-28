@@ -76,7 +76,7 @@ editor *before* deploying — the old CHECK constraint rejects the new values.
 |---|---|---|
 | 1 | Trait survey — 28 questions | Everyone |
 | 2 | Generate anonymised profile cards | Organiser |
-| 3 | Ranking survey — each side ranks the other's cards | Everyone |
+| 3 | Ranking round — each side ranks a shortlist of the best fits | Everyone |
 | 4 | Build the score matrix, tune weights, run Hungarian | Organiser |
 | 5 | Review, override, publish | Organiser |
 
@@ -94,9 +94,39 @@ closes, because the cards don't exist yet — anyone hitting the wrong URL gets 
 4. When answers are in, move to *Profiles generated* and hit **Generate profile
    cards**. Safe to re-run: existing profile numbers are preserved, so links and
    already-submitted rankings stay valid.
-5. Move to *Ranking survey open* and send the `/r/` links.
-6. Move to *Matching*, then **Matching** → *Run matching*.
-7. **Run history** → publish a run. Export the pairings CSV.
+5. Still on **Overview** → **Generate shortlists**. Nobody ranks the whole
+   cohort: each person is offered the 5 profiles that score best against
+   theirs, and puts their top 3 in order. Do this after the cards and before
+   opening the ranking round.
+6. Move to *Ranking survey open*.
+7. Move to *Matching*, then **Matching** → *Run matching*.
+8. **Run history** → publish a run. Export the pairings CSV.
+
+### Shortlists
+
+Showing someone 25 cards asks them to do a job they'll do badly, and a ranking
+drawn from the whole cohort mostly re-states whatever the trait scores already
+said. So stage 3 shows each person a shortlist instead — `SHORTLIST_SIZE`
+candidates, ranked `RANK_COUNT` deep (5 and 3 by default, both in
+`src/lib/shortlists.ts`).
+
+Three things worth knowing:
+
+- Shortlists are **asymmetric**. A big appearing on a little's list doesn't put
+  that little on the big's — each is scored from its owner's point of view.
+- Cards are shown in a **shuffled** order, seeded by the viewer's own token. In
+  score order the first card would read as a recommendation and most people
+  would just agree with it. The seed keeps the order stable across reloads.
+- Regenerating shortlists after anyone has ranked is **refused** unless forced,
+  because the old rankings point at candidates that may not be on the new list.
+  Forcing clears those rankings rather than leaving them dangling.
+
+By default the matcher still considers **every** pair, not just shortlisted
+ones — the ranking simply feeds its component as before. The Matching page has
+an opt-in *"only pair people who shortlisted each other"*. Be careful with it:
+a shortlist-only assignment often has no perfect matching (six littles can share
+the same five bigs), and the optimiser is then forced into a pair nobody
+shortlisted. Those show up flagged in the results.
 
 Ranking is genuinely optional. Matching does not wait for 100% completion — a
 missing ranking just scores 0 on that one component.
@@ -119,7 +149,7 @@ are directly comparable. Default weights:
 | **Closeness & logistics** | q23, q24, q25 | Same gap formula, own component, q23 weighted double — a light-touch big with a close-bigship little is the most damaging mismatch there is |
 | **Values overlap** | q26 | Jaccard index over the selected sets. Only littles are asked q26, so a pair never has both sides — this component is always excluded and its weight redistributes. It exists for the profile card |
 | **Open text** | q27 + q28 | Cosine similarity of embeddings. Excluded entirely when disabled |
-| **Ranking** | ranking round | `(K − r + 1) / K`; mutual → average, one-sided → half credit, neither → 0 |
+| **Ranking** | ranking round | `(K − r + 1) / K` over a shortlist of `K` = 3; mutual → average, one-sided → half credit, neither → 0 |
 
 A question can carry `audience: "big" | "little"` to restrict it to one side.
 `q26` does. A one-sided question can't produce a similarity score — there's
@@ -179,6 +209,7 @@ someone already knows.
 ```
 src/lib/
   questions.ts      the question bank — single source of truth
+  shortlists.ts     who each person is offered, and in what order
   scoring.ts        §8 pipeline, pure and fully unit-tested
   matching.ts       score matrix + Hungarian solve
   override.ts       manual swaps (kept apart so the solver stays server-side)

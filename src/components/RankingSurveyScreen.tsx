@@ -4,13 +4,12 @@ import { IdentityBar } from "@/components/IdentityBar";
 import { RankingSurvey } from "@/components/RankingSurvey";
 import {
   getParticipantByToken,
-  getParticipants,
   getProfileCards,
   getRankings,
+  getShortlists,
 } from "@/lib/data";
 import { supabaseConfigured } from "@/lib/env";
-
-const MIN_RANKS = 5;
+import { RANK_COUNT, presentationOrder } from "@/lib/shortlists";
 
 /** Stage 3, reached either by name pick (cookie) or a direct /r/<token> link. */
 export async function RankingSurveyScreen({
@@ -83,14 +82,19 @@ export async function RankingSurveyScreen({
     );
   }
 
-  const everyone = await getParticipants(round.id);
-  const otherSide = everyone.filter((p) => p.role !== participant.role);
-  const cardRows = await getProfileCards(otherSide.map((p) => p.id));
+  // Only the handful this person was shortlisted against, in the order the
+  // matcher rated them — which the survey then reshuffles so its own guess
+  // doesn't anchor the answer.
+  const shortlist = await getShortlists([participant.id]);
+  const cardRows = await getProfileCards(shortlist.map((s) => s.candidate_id));
 
-  if (cardRows.length === 0) {
+  if (shortlist.length === 0 || cardRows.length === 0) {
     return (
-      <Gate eyebrow="Nothing to rank" title="No profiles have been generated yet.">
-        <p>Let the organiser know — the cards for the other side aren&apos;t built.</p>
+      <Gate eyebrow="Nothing to rank yet" title="Your profiles aren't ready.">
+        <p>
+          The organiser hasn&apos;t put your shortlist together yet. Check back shortly — this
+          same link will work.
+        </p>
       </Gate>
     );
   }
@@ -104,8 +108,11 @@ export async function RankingSurveyScreen({
         token={participant.token}
         name={participant.name}
         role={participant.role}
-        cards={cardRows.map((r) => ({ participant_id: r.participant_id, card: r.card }))}
-        required={Math.min(MIN_RANKS, cardRows.length)}
+        cards={presentationOrder(
+          cardRows.map((r) => ({ participant_id: r.participant_id, card: r.card })),
+          participant.token,
+        )}
+        required={Math.min(RANK_COUNT, cardRows.length)}
         initialRanking={existing.sort((a, b) => a.rank - b.rank).map((r) => r.ranked_id)}
         alreadyDone={Boolean(participant.ranking_completed_at)}
       />

@@ -9,6 +9,7 @@ import type {
   ProfileCardRow,
   RankingRow,
   Round,
+  ShortlistRow,
   TraitResponse,
 } from "./types";
 
@@ -97,6 +98,27 @@ export async function getRankings(participantIds: string[]): Promise<RankingRow[
     .order("rank", { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as RankingRow[];
+}
+
+export async function getShortlists(participantIds: string[]): Promise<ShortlistRow[]> {
+  if (participantIds.length === 0) return [];
+  const { data, error } = await db()
+    .from("shortlists")
+    .select("*")
+    .in("participant_id", participantIds)
+    .order("position", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ShortlistRow[];
+}
+
+export async function getRoundShortlists(roundId: string): Promise<ShortlistRow[]> {
+  const { data, error } = await db()
+    .from("shortlists")
+    .select("*")
+    .eq("round_id", roundId)
+    .order("position", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ShortlistRow[];
 }
 
 export async function getBlockedPairs(roundId: string): Promise<BlockedPair[]> {

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { loadMatchInput } from "@/lib/data";
+import { getRoundShortlists, loadMatchInput } from "@/lib/data";
 import { runMatching } from "@/lib/matching";
+import { restrictMatrixToShortlists, shortlistPairKeys } from "@/lib/shortlists";
 import { normaliseWeights } from "@/lib/scoring";
 import { db } from "@/lib/supabase";
 import { env } from "@/lib/env";
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
     weights?: Record<string, unknown>;
     persist?: boolean;
     embeddings?: boolean;
+    restrict_to_shortlists?: boolean;
   };
   if (!body.round_id) return NextResponse.json({ error: "Missing round." }, { status: 400 });
 
@@ -39,7 +41,23 @@ export async function POST(request: Request) {
   }
 
   const { bigs, littles, blocked, participants } = input;
-  const result = runMatching(bigs, littles, weights, blocked);
+
+  // Holding the matcher to the shortlists is opt-in: a shortlist-only
+  // assignment often has no perfect matching (six littles can share the same
+  // five bigs), and the optimiser would then be forced into a pair nobody
+  // shortlisted. Off by default; when on, forced pairs surface in the results
+  // as blocked so the organiser sees exactly where it had no choice.
+  let result = runMatching(bigs, littles, weights, blocked);
+  if (body.restrict_to_shortlists) {
+    const allowed = shortlistPairKeys(await getRoundShortlists(body.round_id));
+    const restricted = restrictMatrixToShortlists(
+      result.matrix,
+      result.big_ids,
+      result.little_ids,
+      allowed,
+    );
+    result = runMatching(bigs, littles, weights, blocked, restricted);
+  }
 
   let runId: string | null = null;
   if (body.persist) {
@@ -61,6 +79,7 @@ export async function POST(request: Request) {
     run_id: runId,
     weights,
     embeddings_used: useEmbeddings,
+    restricted: Boolean(body.restrict_to_shortlists),
     result,
     people: participants.map((p) => ({
       id: p.id,

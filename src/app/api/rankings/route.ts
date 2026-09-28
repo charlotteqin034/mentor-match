@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
-import { getParticipantByToken, getParticipants } from "@/lib/data";
-
-export const MIN_RANKS = 5;
-export const MAX_RANKS = 8;
+import { getParticipantByToken, getShortlists } from "@/lib/data";
+import { RANK_COUNT } from "@/lib/shortlists";
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
@@ -29,21 +27,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Duplicate entries in the shortlist." }, { status: 422 });
   }
 
-  const everyone = await getParticipants(round.id);
-  const oppositeIds = new Set(
-    everyone.filter((p) => p.role !== participant.role).map((p) => p.id),
-  );
-
-  // With a tiny cohort the floor can't exceed the number of people available.
-  const required = Math.min(MIN_RANKS, oppositeIds.size);
-  if (ranked.length < required || ranked.length > MAX_RANKS) {
+  // People rank within the shortlist they were offered, not the whole cohort.
+  const shortlist = await getShortlists([participant.id]);
+  if (shortlist.length === 0) {
     return NextResponse.json(
-      { error: `Pick between ${required} and ${MAX_RANKS} profiles.` },
+      { error: "You haven't been given any profiles to rank yet." },
+      { status: 409 },
+    );
+  }
+  const offered = new Set(shortlist.map((s) => s.candidate_id));
+
+  // A shortlist shorter than the target can't be ranked any deeper than it is.
+  const required = Math.min(RANK_COUNT, offered.size);
+  if (ranked.length !== required) {
+    return NextResponse.json(
+      { error: `Put exactly ${required} in order.` },
       { status: 422 },
     );
   }
-  if (!ranked.every((id) => oppositeIds.has(id))) {
-    return NextResponse.json({ error: "That shortlist contains someone you can't rank." }, { status: 422 });
+  if (!ranked.every((id) => offered.has(id))) {
+    return NextResponse.json(
+      { error: "That ranking includes someone who wasn't on your shortlist." },
+      { status: 422 },
+    );
   }
 
   const client = db();

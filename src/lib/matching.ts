@@ -115,9 +115,11 @@ export function runMatching(
   littles: MatchParticipant[],
   weights: Weights = DEFAULT_WEIGHTS,
   blockedPairs: { participant_a: string; participant_b: string }[] = [],
+  /** Pre-built matrix, when a caller has already adjusted it (e.g. shortlists). */
+  prebuilt?: MatrixCell[][],
 ): MatchResult {
   const blocked = blockedSet(blockedPairs);
-  const matrix = buildScoreMatrix(bigs, littles, weights, blocked);
+  const matrix = prebuilt ?? buildScoreMatrix(bigs, littles, weights, blocked);
 
   const empty: MatchResult = {
     pairs: [],

@@ -73,6 +73,16 @@ export type RankingRow = {
   submitted_at: string;
 };
 
+export type ShortlistRow = {
+  id: string;
+  round_id: string;
+  participant_id: string;
+  candidate_id: string;
+  position: number;
+  score: number;
+  generated_at: string;
+};
+
 export type BlockedPair = {
   id: string;
   round_id: string;

@@ -29,6 +29,7 @@ type MatchResponse = {
   run_id: string | null;
   weights: Weights;
   embeddings_used: boolean;
+  restricted: boolean;
   result: MatchResult;
   people: Person[];
 };
@@ -49,6 +50,7 @@ export function MatchingConsole({
   const router = useRouter();
   const [weights, setWeights] = useState<Weights>({ ...DEFAULT_WEIGHTS });
   const [embeddings, setEmbeddings] = useState(embeddingsDefault);
+  const [restrict, setRestrict] = useState(false);
   const [data, setData] = useState<MatchResponse | null>(null);
   const [pairs, setPairs] = useState<MatchedPair[]>([]);
   const [busy, setBusy] = useState(false);
@@ -62,7 +64,12 @@ export function MatchingConsole({
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const run = useCallback(
-    async (persist: boolean, nextWeights: Weights, useEmbeddings: boolean) => {
+    async (
+      persist: boolean,
+      nextWeights: Weights,
+      useEmbeddings: boolean,
+      restrictToShortlists: boolean,
+    ) => {
       setBusy(true);
       setError("");
       try {
@@ -71,6 +78,7 @@ export function MatchingConsole({
           weights: nextWeights,
           persist,
           embeddings: useEmbeddings,
+          restrict_to_shortlists: restrictToShortlists,
         });
         setData(res);
         setPairs(res.result.pairs);
@@ -96,15 +104,15 @@ export function MatchingConsole({
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(() => {
       const same = WEIGHT_KEYS.every((k) => data.weights[k] === weights[k]);
-      if (same && data.embeddings_used === embeddings) return;
-      void run(false, weights, embeddings);
+      if (same && data.embeddings_used === embeddings && data.restricted === restrict) return;
+      void run(false, weights, embeddings, restrict);
     }, 350);
     return () => {
       if (debounce.current) clearTimeout(debounce.current);
     };
     // `data` is intentionally excluded: it changes as a result of the run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weights, embeddings]);
+  }, [weights, embeddings, restrict]);
 
   const people = useMemo(
     () => new Map((data?.people ?? []).map((p) => [p.id, p])),
@@ -201,11 +209,29 @@ export function MatchingConsole({
           </p>
         </div>
 
+        <div className="card p-4">
+          <h2 className="text-sm font-semibold">Shortlists</h2>
+          <label className="mt-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="accent-accent"
+              checked={restrict}
+              onChange={(e) => setRestrict(e.target.checked)}
+            />
+            Only pair people who shortlisted each other
+          </label>
+          <p className="mt-2 text-xs text-muted">
+            Off by default. A shortlist-only assignment often has no perfect matching — six
+            littles can share the same five bigs — and the optimiser then has to force a pair
+            nobody shortlisted. Any it forces show up flagged below.
+          </p>
+        </div>
+
         <button
           type="button"
           className="btn btn-primary w-full"
           disabled={busy}
-          onClick={() => run(true, weights, embeddings)}
+          onClick={() => run(true, weights, embeddings, restrict)}
         >
           {busy ? "Working…" : data ? "Re-run and save" : "Run matching"}
         </button>
@@ -252,12 +278,14 @@ export function MatchingConsole({
 
             {blockedAssigned.length > 0 && (
               <div className="card border-bad/40 bg-bad-soft p-4 text-sm text-bad">
-                <p className="font-semibold">A blocked pair was forced</p>
+                <p className="font-semibold">
+                  {blockedAssigned.length} pair
+                  {blockedAssigned.length === 1 ? " was" : "s were"} forced
+                </p>
                 <p className="mt-1">
-                  {blockedAssigned.length} assigned pair
-                  {blockedAssigned.length === 1 ? " is" : "s are"} on the blocked list. That only
-                  happens when there was no legal alternative — unblock someone or add a
-                  participant.
+                  {restrict
+                    ? "These pairs weren't on either person's shortlist, but there was no legal alternative — the shortlists don't admit a perfect matching. Either accept these, widen the shortlists, or untick the restriction."
+                    : "These pairs are on the blocked list. That only happens when there was no legal alternative — unblock someone or add a participant."}
                 </p>
               </div>
             )}

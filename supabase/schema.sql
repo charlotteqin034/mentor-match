@@ -118,3 +118,26 @@ alter table rankings         enable row level security;
 alter table blocked_pairs    enable row level security;
 alter table match_runs       enable row level security;
 alter table text_embeddings  enable row level security;
+
+-- ---------------------------------------------------------------------------
+-- Ranking shortlists
+--
+-- Stage 3 no longer shows everyone the whole other cohort. The organiser
+-- generates a shortlist of the best-scoring candidates per person, and people
+-- rank within that. One row per (person, candidate) they were offered.
+-- ---------------------------------------------------------------------------
+create table if not exists shortlists (
+  id uuid primary key default gen_random_uuid(),
+  round_id uuid references rounds(id) on delete cascade,
+  participant_id uuid references participants(id) on delete cascade,
+  candidate_id uuid references participants(id) on delete cascade,
+  position int not null,            -- 1 = the algorithm's own best guess
+  score numeric not null,           -- pre-ranking score, so the admin can inspect it
+  generated_at timestamptz default now(),
+  unique (participant_id, candidate_id)
+);
+
+create index if not exists shortlists_participant_idx on shortlists (participant_id, position);
+create index if not exists shortlists_round_idx on shortlists (round_id);
+
+alter table shortlists enable row level security;

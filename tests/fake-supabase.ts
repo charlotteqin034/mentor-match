@@ -15,6 +15,7 @@ const TABLES = [
   "trait_responses",
   "profile_cards",
   "rankings",
+  "shortlists",
   "blocked_pairs",
   "match_runs",
   "text_embeddings",
@@ -26,6 +27,7 @@ const PRIMARY_KEY: Record<string, string> = {
   trait_responses: "participant_id",
   profile_cards: "participant_id",
   rankings: "id",
+  shortlists: "id",
   blocked_pairs: "id",
   match_runs: "id",
   text_embeddings: "participant_id",
@@ -41,6 +43,7 @@ const DEFAULTS: Record<string, () => Row> = {
   trait_responses: () => ({ submitted_at: new Date().toISOString() }),
   profile_cards: () => ({ generated_at: new Date().toISOString() }),
   rankings: () => ({ submitted_at: new Date().toISOString() }),
+  shortlists: () => ({ generated_at: new Date().toISOString() }),
   blocked_pairs: () => ({}),
   match_runs: () => ({ total_score: null }),
   text_embeddings: () => ({}),
@@ -248,6 +251,9 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: Error | null }> {
       }
       this.store.tables.rankings = this.store.tables.rankings.filter(
         (r) => !ids.has(r.ranker_id as string) && !ids.has(r.ranked_id as string),
+      );
+      this.store.tables.shortlists = this.store.tables.shortlists.filter(
+        (r) => !ids.has(r.participant_id as string) && !ids.has(r.candidate_id as string),
       );
       this.store.tables.blocked_pairs = this.store.tables.blocked_pairs.filter(
         (r) => !ids.has(r.participant_a as string) && !ids.has(r.participant_b as string),
