@@ -14,7 +14,13 @@ import {
   valuesOverlap,
   type Side,
 } from "@/lib/scoring";
-import { QUESTIONS, QUESTIONS_BY_ID, SECTIONS, type MultiQuestion } from "@/lib/questions";
+import {
+  QUESTIONS,
+  QUESTIONS_BY_ID,
+  SECTIONS,
+  questionsInSection,
+  type MultiQuestion,
+} from "@/lib/questions";
 import { answersAt } from "./fixtures";
 
 const side = (id: string, over: Partial<Side> = {}): Side => ({
@@ -48,6 +54,15 @@ describe("the question bank", () => {
     ]);
     // Still pickable within the 2-3 range now that the list is shorter.
     expect(q26.options.length).toBeGreaterThanOrEqual(q26.max);
+  });
+
+  it("doesn't open with the drinking and smoking questions", () => {
+    const about = questionsInSection("about").map((q) => q.id);
+    expect(about[0]).toBe("q3");
+    expect(about.slice(-2)).toEqual(["q1", "q2"]);
+    // Ids are stored answer keys, so they must survive the reordering.
+    expect(QUESTIONS_BY_ID.q1.text).toBe("I enjoy drinking");
+    expect(QUESTIONS_BY_ID.q2.text).toBe("I enjoy smoking");
   });
 
   it("puts every question in a section that actually exists", () => {

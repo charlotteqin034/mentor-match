@@ -97,15 +97,7 @@ const scale = (
 });
 
 export const QUESTIONS: Question[] = [
-  // ---- Section A: scale questions q1–q22 ----------------------------------
-  scale("q1", "about", "I enjoy drinking", "no", "yes", {
-    low: "Doesn't drink",
-    high: "Enjoys drinking",
-  }),
-  scale("q2", "about", "I enjoy smoking", "no", "yes", {
-    low: "Doesn't smoke",
-    high: "Enjoys smoking",
-  }),
+  // ---- Section A: the 22 "about you" scales (rendered in array order) ------
   scale("q3", "about", "I am the definition of the life of the party", "no", "yes", {
     low: "Not a party person",
     high: "Life of the party",
@@ -190,6 +182,19 @@ export const QUESTIONS: Question[] = [
   scale("q22", "about", "I think rules are…", "meant to guide you", "meant to be questioned", {
     low: "Takes rules as guidance",
     high: "Questions the rules",
+  }),
+
+  // Deliberately last in this section, despite the ids. Opening a mentorship
+  // survey by asking about drinking and smoking sets the wrong tone, and these
+  // read far better once someone is warmed up. The ids stay put because they
+  // key stored answers — array order is what the survey renders by.
+  scale("q1", "about", "I enjoy drinking", "no", "yes", {
+    low: "Doesn't drink",
+    high: "Enjoys drinking",
+  }),
+  scale("q2", "about", "I enjoy smoking", "no", "yes", {
+    low: "Doesn't smoke",
+    high: "Enjoys smoking",
   }),
 
   // ---- Section B: logistics, heavily weighted (§8c) ------------------------
