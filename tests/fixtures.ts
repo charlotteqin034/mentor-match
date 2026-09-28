@@ -6,11 +6,10 @@ import type { MatchParticipant } from "@/lib/matching";
 
 export const VALUE_IDS = [
   "career_clarity",
-  "confidence",
   "technical_depth",
   "network",
-  "work_life_balance",
   "direction",
+  "social",
 ];
 
 /** A complete, valid answer set with every scale question set to `scaleValue`. */

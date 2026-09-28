@@ -233,11 +233,10 @@ export const QUESTIONS: Question[] = [
     allowOther: true,
     options: [
       { id: "career_clarity", label: "Career clarity" },
-      { id: "confidence", label: "Building confidence" },
       { id: "technical_depth", label: "Technical / skill depth" },
       { id: "network", label: "Expanding my network" },
-      { id: "work_life_balance", label: "Work-life balance" },
       { id: "direction", label: "Finding direction" },
+      { id: "social", label: "Hanging out socially" },
     ],
   },
   {

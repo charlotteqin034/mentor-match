@@ -102,7 +102,7 @@ async function submitAllTraits() {
         token: p.token,
         answers: answersAt(base, {
           q23: 1 + ((i * 3) % 7),
-          q26: i % 2 ? ["network", "confidence"] : ["career_clarity", "network"],
+          q26: i % 2 ? ["network", "social"] : ["career_clarity", "network"],
         }),
       }),
     );

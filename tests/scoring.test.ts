@@ -14,7 +14,7 @@ import {
   valuesOverlap,
   type Side,
 } from "@/lib/scoring";
-import { QUESTIONS, SECTIONS } from "@/lib/questions";
+import { QUESTIONS, QUESTIONS_BY_ID, SECTIONS, type MultiQuestion } from "@/lib/questions";
 import { answersAt } from "./fixtures";
 
 const side = (id: string, over: Partial<Side> = {}): Side => ({
@@ -35,6 +35,19 @@ describe("the question bank", () => {
     expect(ids).not.toContain("q29");
     expect(ids).not.toContain("q30");
     expect(ids.at(-1)).toBe("q28");
+  });
+
+  it("offers the agreed set of things to want out of this", () => {
+    const q26 = QUESTIONS_BY_ID.q26 as MultiQuestion;
+    expect(q26.options.map((o) => o.label)).toEqual([
+      "Career clarity",
+      "Technical / skill depth",
+      "Expanding my network",
+      "Finding direction",
+      "Hanging out socially",
+    ]);
+    // Still pickable within the 2-3 range now that the list is shorter.
+    expect(q26.options.length).toBeGreaterThanOrEqual(q26.max);
   });
 
   it("puts every question in a section that actually exists", () => {
@@ -157,7 +170,7 @@ describe("§8d values overlap", () => {
   });
 
   it("scores partial overlap proportionally", () => {
-    const a = answersAt(4, { q26: ["network", "confidence"] });
+    const a = answersAt(4, { q26: ["network", "social"] });
     const b = answersAt(4, { q26: ["network", "career_clarity"] });
     expect(valuesOverlap(a, b)).toBeCloseTo(1 / 3, 10);
   });
