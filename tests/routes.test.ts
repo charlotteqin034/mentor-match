@@ -96,12 +96,12 @@ const setStage = (roundId: string, stage: string) =>
 async function submitAllTraits() {
   for (const [i, p] of people().entries()) {
     // Spread the answers out so pairs don't all score identically.
-    const base = 1 + (i % 7);
+    const base = 1 + (i % 5);
     const res = await traitRoute(
       req("/api/trait-response", {
         token: p.token,
         answers: answersAt(base, {
-          q23: 1 + ((i * 3) % 7),
+          q23: 1 + ((i * 3) % 5),
           q26: i % 2 ? ["network", "social"] : ["career_clarity", "network"],
         }),
       }),

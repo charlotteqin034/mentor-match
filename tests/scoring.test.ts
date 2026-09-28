@@ -17,15 +17,21 @@ import {
 import {
   QUESTIONS,
   QUESTIONS_BY_ID,
+  SCALE_MAX,
+  SCALE_MIDPOINT,
+  SCALE_MIN,
+  SCALE_POINTS,
+  SCALE_QUESTIONS,
   SECTIONS,
   questionsInSection,
   type MultiQuestion,
 } from "@/lib/questions";
 import { answersAt } from "./fixtures";
 
+// Default everyone to the midpoint, so a test only has to state what differs.
 const side = (id: string, over: Partial<Side> = {}): Side => ({
   id,
-  answers: answersAt(4),
+  answers: answersAt(3),
   ranks: [],
   ...over,
 });
@@ -41,6 +47,28 @@ describe("the question bank", () => {
     expect(ids).not.toContain("q29");
     expect(ids).not.toContain("q30");
     expect(ids.at(-1)).toBe("q28");
+  });
+
+  it("runs on a 1-5 scale, with everything derived from those bounds", () => {
+    expect(SCALE_MIN).toBe(1);
+    expect(SCALE_MAX).toBe(5);
+    expect(SCALE_POINTS).toEqual([1, 2, 3, 4, 5]);
+    expect(SCALE_MIDPOINT).toBe(3);
+  });
+
+  it("has dropped the dry-humour question and gained the free-day one", () => {
+    const ids = QUESTIONS.map((q) => q.id);
+    expect(ids).not.toContain("q9");
+    expect(ids).toContain("q31");
+    expect(QUESTIONS_BY_ID.q31.text).toBe("On a free day, I'd rather be…");
+    // It sits with the other lifestyle scales, not tacked on the end.
+    const about = questionsInSection("about").map((q) => q.id);
+    expect(about[about.indexOf("q31") - 1]).toBe("q17");
+  });
+
+  it("keeps 21 questions feeding trait similarity", () => {
+    const similarity = SCALE_QUESTIONS.filter((q) => q.mode === "similarity");
+    expect(similarity).toHaveLength(21);
   });
 
   it("offers the agreed set of things to want out of this", () => {
@@ -73,95 +101,95 @@ describe("the question bank", () => {
 
 describe("§8a trait similarity", () => {
   it("scores identical responses at 1.0", () => {
-    expect(traitSimilarity(answersAt(4), answersAt(4))).toBe(1);
+    expect(traitSimilarity(answersAt(3), answersAt(3))).toBe(1);
   });
 
   it("scores maximally opposite responses at 0.0", () => {
-    expect(traitSimilarity(answersAt(1), answersAt(7))).toBe(0);
+    expect(traitSimilarity(answersAt(1), answersAt(5))).toBe(0);
   });
 
   it("is linear in the gap", () => {
-    // A gap of 3 on every question is exactly half the 6-point range.
-    expect(traitSimilarity(answersAt(1), answersAt(4))).toBeCloseTo(0.5, 10);
+    // A gap of 2 on every question is exactly half the 4-point range.
+    expect(traitSimilarity(answersAt(1), answersAt(3))).toBeCloseTo(0.5, 10);
   });
 
   it("skips questions either side left unanswered", () => {
-    const partial = answersAt(4);
+    const partial = answersAt(3);
     delete partial.q1;
     // q1 drops out; every remaining similarity question still agrees exactly.
-    expect(traitSimilarity(partial, answersAt(4))).toBe(1);
+    expect(traitSimilarity(partial, answersAt(3))).toBe(1);
   });
 
   it("returns null when there is nothing comparable", () => {
-    expect(traitSimilarity(null, answersAt(4))).toBeNull();
+    expect(traitSimilarity(null, answersAt(3))).toBeNull();
     expect(traitSimilarity({}, {})).toBeNull();
   });
 
   it("excludes q10 — that is cross-preference, not similarity", () => {
-    const a = answersAt(4, { q10: 1 });
-    const b = answersAt(4, { q10: 7 });
+    const a = answersAt(3, { q10: 1 });
+    const b = answersAt(3, { q10: 5 });
     expect(traitSimilarity(a, b)).toBe(1);
   });
 });
 
 describe("§8b cross-preference (q10 → q15)", () => {
   it("mirrors the scale: q10=7 expects a partner at q15=1", () => {
-    expect(expectedPartnerAnswer(7)).toBe(1);
-    expect(expectedPartnerAnswer(1)).toBe(7);
-    expect(expectedPartnerAnswer(4)).toBe(4);
+    expect(expectedPartnerAnswer(5)).toBe(1);
+    expect(expectedPartnerAnswer(1)).toBe(5);
+    expect(expectedPartnerAnswer(3)).toBe(3);
   });
 
   it("scores highest when someone wanting go-with-the-flow gets a loose planner", () => {
-    const wanter = answersAt(4, { q10: 7 });
-    const looseplanner = answersAt(4, { q15: 1 });
+    const wanter = answersAt(3, { q10: 5 });
+    const looseplanner = answersAt(3, { q15: 1 });
     delete looseplanner.q10; // isolate the single direction under test
     expect(crossPreference(wanter, looseplanner)).toBe(1);
   });
 
   it("scores lowest when that same person gets a strict planner", () => {
-    const wanter = answersAt(4, { q10: 7 });
-    const strict = answersAt(4, { q15: 7 });
+    const wanter = answersAt(3, { q10: 5 });
+    const strict = answersAt(3, { q15: 5 });
     delete strict.q10;
     expect(crossPreference(wanter, strict)).toBe(0);
   });
 
   it("averages the two directions", () => {
-    // A wants flow (q10=7) and gets it (B q15=1) → 1.0
-    // B wants a planner (q10=1) and A plans loosely (q15=1) → expected 7 vs 1 → 0.0
-    const a = answersAt(4, { q10: 7, q15: 1 });
-    const b = answersAt(4, { q10: 1, q15: 1 });
+    // A wants flow (q10=5) and gets it (B q15=1) → 1.0
+    // B wants a planner (q10=1) and A plans loosely (q15=1) → expected 5 vs 1 → 0.0
+    const a = answersAt(3, { q10: 5, q15: 1 });
+    const b = answersAt(3, { q10: 1, q15: 1 });
     expect(crossPreference(a, b)).toBeCloseTo(0.5, 10);
   });
 });
 
 describe("§8c closeness / logistics", () => {
   it("scores identical logistics answers at 1.0", () => {
-    expect(closenessGap(answersAt(4), answersAt(4))).toBe(1);
+    expect(closenessGap(answersAt(3), answersAt(3))).toBe(1);
   });
 
   it("weights q23 double q24 and q25", () => {
     // q23 maximally mismatched, q24/q25 in perfect agreement:
     // (0 × 2 + 1 × 1 + 1 × 1) / 4 = 0.5
-    const a = answersAt(4, { q23: 1 });
-    const b = answersAt(4, { q23: 7 });
+    const a = answersAt(3, { q23: 1 });
+    const b = answersAt(3, { q23: 5 });
     expect(closenessGap(a, b)).toBeCloseTo(0.5, 10);
 
     // The same maximal mismatch on q24 alone costs half as much.
-    const c = answersAt(4, { q24: 1 });
-    const d = answersAt(4, { q24: 7 });
+    const c = answersAt(3, { q24: 1 });
+    const d = answersAt(3, { q24: 5 });
     expect(closenessGap(c, d)).toBeCloseTo(0.75, 10);
   });
 
   it("collapses to 0 when all three logistics answers are opposed", () => {
-    const a = answersAt(4, { q23: 1, q24: 1, q25: 1 });
-    const b = answersAt(4, { q23: 7, q24: 7, q25: 7 });
+    const a = answersAt(3, { q23: 1, q24: 1, q25: 1 });
+    const b = answersAt(3, { q23: 5, q24: 5, q25: 5 });
     expect(closenessGap(a, b)).toBe(0);
   });
 
   it("drags the total down hard even when everything else agrees perfectly", () => {
-    const a = side("a", { answers: answersAt(4, { q23: 1 }) });
-    const b = side("b", { answers: answersAt(4, { q23: 7 }) });
-    const agreed = side("c", { answers: answersAt(4) });
+    const a = side("a", { answers: answersAt(3, { q23: 1 }) });
+    const b = side("b", { answers: answersAt(3, { q23: 5 }) });
+    const agreed = side("c", { answers: answersAt(3) });
     const mismatched = scorePair(a, b).total;
     const matched = scorePair(agreed, side("d")).total;
     expect(mismatched).toBeLessThan(matched);
@@ -191,8 +219,8 @@ describe("§8d values overlap", () => {
   });
 
   it("returns null when either side didn't answer", () => {
-    const a = answersAt(4);
-    const b = answersAt(4);
+    const a = answersAt(3);
+    const b = answersAt(3);
     delete a.q26;
     expect(valuesOverlap(a, b)).toBeNull();
   });
@@ -214,7 +242,7 @@ describe("§8e open text", () => {
 describe("§8f ranking bonus", () => {
   const withRanks = (id: string, ranks: [string, number][]): Side => ({
     id,
-    answers: answersAt(4),
+    answers: answersAt(3),
     ranks: ranks.map(([rankedId, rank]) => ({ rankedId, rank })),
   });
 
@@ -285,12 +313,12 @@ describe("§8g combining and renormalisation", () => {
 
   it("keeps totals inside [0, 1] with embeddings disabled", () => {
     const best = scorePair(
-      { id: "a", answers: answersAt(4), ranks: [{ rankedId: "b", rank: 1 }] },
-      { id: "b", answers: answersAt(4), ranks: [{ rankedId: "a", rank: 1 }] },
+      { id: "a", answers: answersAt(3), ranks: [{ rankedId: "b", rank: 1 }] },
+      { id: "b", answers: answersAt(3), ranks: [{ rankedId: "a", rank: 1 }] },
     );
     const worst = scorePair(
       { id: "a", answers: answersAt(1, { q10: 1 }), ranks: [] },
-      { id: "b", answers: answersAt(7, { q10: 7 }), ranks: [] },
+      { id: "b", answers: answersAt(5, { q10: 5 }), ranks: [] },
     );
     expect(best.components.openText).toBeNull();
     expect(best.total).toBeLessThanOrEqual(1);

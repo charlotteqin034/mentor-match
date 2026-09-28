@@ -6,7 +6,12 @@
  * not to who they already know.
  */
 
-import { QUESTIONS_BY_ID, SCALE_QUESTIONS, type MultiQuestion } from "./questions";
+import {
+  QUESTIONS_BY_ID,
+  SCALE_MIDPOINT,
+  SCALE_QUESTIONS,
+  type MultiQuestion,
+} from "./questions";
 import { OTHER_PREFIX } from "./validation";
 import type { Answers } from "./scoring";
 
@@ -22,7 +27,6 @@ export type ProfileCard = {
   wants: { closeness: number; communication: number; cadence: number };
 };
 
-const MIDPOINT = 4;
 const MAX_STANDOUT = 5;
 
 export function valueLabel(token: string): string {
@@ -31,7 +35,7 @@ export function valueLabel(token: string): string {
   return q.options.find((o) => o.id === token)?.label ?? token;
 }
 
-const num = (answers: Answers, id: string, fallback = MIDPOINT): number => {
+const num = (answers: Answers, id: string, fallback = SCALE_MIDPOINT): number => {
   const v = answers[id];
   return typeof v === "number" ? v : fallback;
 };
@@ -51,18 +55,18 @@ const str = (answers: Answers, id: string): string => {
 export function standoutTraits(answers: Answers): StandoutTrait[] {
   return SCALE_QUESTIONS.filter((q) => q.mode === "similarity")
     .map((q) => {
-      const value = num(answers, q.id, MIDPOINT);
+      const value = num(answers, q.id, SCALE_MIDPOINT);
       return {
         question: q,
         value,
-        deviation: Math.abs(value - MIDPOINT),
+        deviation: Math.abs(value - SCALE_MIDPOINT),
       };
     })
     .filter((x) => x.deviation > 0)
     .sort((a, b) => b.deviation - a.deviation) // stable sort keeps survey order for ties
     .slice(0, MAX_STANDOUT)
     .map(({ question, value }) => ({
-      label: value > MIDPOINT ? question.phrases.high : question.phrases.low,
+      label: value > SCALE_MIDPOINT ? question.phrases.high : question.phrases.low,
       source: question.id,
       value,
     }));

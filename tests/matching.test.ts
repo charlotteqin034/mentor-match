@@ -72,7 +72,7 @@ describe("the assignment itself", () => {
     const mentors = [person("m1", "mentor", answersAt(4))];
     const mentees = [
       person("e1", "mentee", answersAt(4)),
-      person("e2", "mentee", answersAt(7)),
+      person("e2", "mentee", answersAt(5)),
     ];
     const result = runMatching(mentors, mentees);
     expect(result.pairs[0].mentee_id).toBe("e1");

@@ -1,6 +1,6 @@
 "use client";
 
-import { QUESTIONS, type Question } from "@/lib/questions";
+import { QUESTIONS, SCALE_MIDPOINT, SCALE_POINTS, type Question } from "@/lib/questions";
 import { valueLabel } from "@/lib/profile-cards";
 
 function renderAnswer(question: Question, value: unknown): React.ReactNode {
@@ -11,7 +11,7 @@ function renderAnswer(question: Question, value: unknown): React.ReactNode {
       return (
         <span className="flex items-center gap-2">
           <span className="flex gap-0.5">
-            {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+            {SCALE_POINTS.map((i) => (
               <span
                 key={i}
                 className={`h-3 w-1.5 rounded-sm ${i === n ? "bg-accent" : "bg-line"}`}
@@ -20,7 +20,11 @@ function renderAnswer(question: Question, value: unknown): React.ReactNode {
           </span>
           <span className="tabular-nums text-muted">{n}</span>
           <span className="text-xs text-faint">
-            {n > 4 ? question.phrases.high : n < 4 ? question.phrases.low : "middle"}
+            {n > SCALE_MIDPOINT
+              ? question.phrases.high
+              : n < SCALE_MIDPOINT
+                ? question.phrases.low
+                : "middle"}
           </span>
         </span>
       );

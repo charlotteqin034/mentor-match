@@ -107,12 +107,18 @@ are directly comparable. Default weights:
 
 | Component | Questions | How |
 |---|---|---|
-| **Trait similarity** | 21 scale questions | `1 − |a − b| / 6`, weighted mean |
+| **Trait similarity** | 21 scale questions | `1 − |a − b| / 4`, weighted mean |
 | **Cross-preference** | q10 → q15 | The scales run opposite ways, so the hoped-for partner answer is `8 − mine`; both directions, averaged |
 | **Closeness & logistics** | q23, q24, q25 | Same gap formula, own component, q23 weighted double — a light-touch mentor with a close-mentorship mentee is the most damaging mismatch there is |
 | **Values overlap** | q26 | Jaccard index over the selected sets |
 | **Open text** | q27 + q28 | Cosine similarity of embeddings. Excluded entirely when disabled |
 | **Ranking** | ranking round | `(K − r + 1) / K`; mutual → average, one-sided → half credit, neither → 0 |
+
+Every scale question runs 1–5. That range lives in `SCALE_MIN`/`SCALE_MAX` in
+`src/lib/questions.ts` and everything else derives from it — the radio buttons,
+the gap denominator, the cross-preference mirror, the profile-card midpoint. If
+you change it, note that answers already in the database were recorded on the
+old range and any now out of bounds read as unanswered.
 
 **Missing components are excluded, not zeroed.** A `null` component drops out of
 the weighted mean and the rest renormalise, so totals stay in `[0, 1]` whatever

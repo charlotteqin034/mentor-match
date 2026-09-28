@@ -1,6 +1,6 @@
 /** Hand-built fixtures + a seeded generator for the synthetic pipeline test. */
 
-import { SCALE_QUESTIONS } from "@/lib/questions";
+import { SCALE_MAX, SCALE_MIN, SCALE_QUESTIONS } from "@/lib/questions";
 import type { Answers } from "@/lib/scoring";
 import type { MatchParticipant } from "@/lib/matching";
 
@@ -40,7 +40,7 @@ export function syntheticCohort(
 ): MatchParticipant[] {
   const rand = mulberry32(seed);
   const pick = <T,>(list: T[]): T => list[Math.floor(rand() * list.length)];
-  const scale = () => 1 + Math.floor(rand() * 7);
+  const scale = () => SCALE_MIN + Math.floor(rand() * (SCALE_MAX - SCALE_MIN + 1));
 
   return Array.from({ length: count }, (_, i) => {
     const answers: Answers = {};

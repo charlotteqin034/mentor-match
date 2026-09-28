@@ -1,6 +1,6 @@
 "use client";
 
-import type { ScaleQuestion } from "@/lib/questions";
+import { SCALE_POINTS, type ScaleQuestion } from "@/lib/questions";
 
 export function ScaleRow({
   question,
@@ -14,11 +14,11 @@ export function ScaleRow({
   return (
     <div>
       <div className="flex items-center gap-3">
-        <span className="hidden w-24 shrink-0 text-right text-xs leading-tight text-muted sm:block">
+        <span className="hidden w-28 shrink-0 text-right text-xs leading-tight text-muted sm:block">
           {question.low}
         </span>
         <div className="scale-row flex-1">
-          {[1, 2, 3, 4, 5, 6, 7].map((n) => {
+          {SCALE_POINTS.map((n) => {
             const selected = value === n;
             return (
               <label
@@ -42,7 +42,7 @@ export function ScaleRow({
             );
           })}
         </div>
-        <span className="hidden w-24 shrink-0 text-xs leading-tight text-muted sm:block">
+        <span className="hidden w-28 shrink-0 text-xs leading-tight text-muted sm:block">
           {question.high}
         </span>
       </div>

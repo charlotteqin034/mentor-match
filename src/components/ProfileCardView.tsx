@@ -1,5 +1,5 @@
 import type { ProfileCard } from "@/lib/profile-cards";
-import { QUESTIONS_BY_ID, type ScaleQuestion } from "@/lib/questions";
+import { QUESTIONS_BY_ID, SCALE_POINTS, type ScaleQuestion } from "@/lib/questions";
 
 const WANT_FIELDS = [
   { key: "closeness", question: "q23" },
@@ -16,7 +16,7 @@ function WantMeter({ questionId, value }: { questionId: string; value: number })
         <span className="text-right">{q.high}</span>
       </div>
       <div className="mt-1 flex gap-0.5">
-        {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+        {SCALE_POINTS.map((n) => (
           <span
             key={n}
             className={`h-1.5 flex-1 rounded-sm ${n === value ? "bg-accent" : "bg-line"}`}

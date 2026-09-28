@@ -21,9 +21,21 @@ export const SECTIONS: { id: SectionId; title: string; blurb?: string }[] = [
   { id: "looking", title: "What you're looking for" },
 ];
 
+export const SCALE_MIN = 1;
+export const SCALE_MAX = 5;
+/** The denominator in every gap formula. */
+export const SCALE_RANGE = SCALE_MAX - SCALE_MIN;
+/** Every selectable point, so no component hardcodes how many there are. */
+export const SCALE_POINTS = Array.from(
+  { length: SCALE_MAX - SCALE_MIN + 1 },
+  (_, i) => SCALE_MIN + i,
+);
+/** Exact centre of the scale — what "no strong feeling" looks like. */
+export const SCALE_MIDPOINT = (SCALE_MIN + SCALE_MAX) / 2;
+
 /** Printed verbatim above the first block of scale questions. */
 export const SCALE_INSTRUCTION =
-  'These questions are on a 1–7 scale. 1 generally means "less" and 7 means "more" — e.g. 1 = no, 7 = yes; 1 = major introversion, 7 = major extroversion. The specific anchors are labeled on each question.';
+  `These questions are on a 1–${SCALE_MAX} scale. 1 generally means "less" and ${SCALE_MAX} means "more" — e.g. 1 = no, ${SCALE_MAX} = yes; 1 = major introversion, ${SCALE_MAX} = major extroversion. The specific anchors are labeled on each question.`;
 
 /**
  * How a question feeds the score.
@@ -122,10 +134,6 @@ export const QUESTIONS: Question[] = [
     low: "Finds it hard to wind down",
     high: "Finds it hard to get hyped up",
   }),
-  scale("q9", "about", "I have a dry sense of humor", "no", "yes", {
-    low: "Warm, expressive humor",
-    high: "Dry sense of humor",
-  }),
   scale(
     "q10",
     "about",
@@ -162,6 +170,10 @@ export const QUESTIONS: Question[] = [
   scale("q17", "about", "I'd rather spend a weekend…", "relaxing at home", "doing something new", {
     low: "Homebody weekends",
     high: "Always up for something new",
+  }),
+  scale("q31", "about", "On a free day, I'd rather be…", "indoors at home", "out and about", {
+    low: "Happiest indoors",
+    high: "Happiest out and about",
   }),
   scale("q18", "about", "I care more about…", "the journey", "the destination", {
     low: "In it for the journey",
@@ -277,7 +289,3 @@ export const SCALE_QUESTIONS = QUESTIONS.filter(
 
 export const questionsInSection = (section: SectionId) =>
   QUESTIONS.filter((q) => q.section === section);
-
-export const SCALE_MIN = 1;
-export const SCALE_MAX = 7;
-export const SCALE_RANGE = SCALE_MAX - SCALE_MIN; // 6 — the denominator in every gap formula
