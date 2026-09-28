@@ -152,9 +152,9 @@ export const QUESTIONS: Question[] = [
     low: "Not especially active",
     high: "Very active lifestyle",
   }),
-  scale("q6", "about", "I find politically incorrect humor funny", "no", "yes", {
-    low: "Prefers humor that stays clean",
-    high: "Finds edgy humor funny",
+  scale("q6", "about", "I enjoy edgy or unconventional comedy", "no", "yes", {
+    low: "Prefers mainstream comedy",
+    high: "Enjoys edgy comedy",
   }),
   scale("q7", "about", "I go to great lengths to minimize my harm to the planet", "no", "yes", {
     low: "Not focused on sustainability",
