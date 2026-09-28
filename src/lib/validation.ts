@@ -39,6 +39,11 @@ function checkOne(
       if (valid.length > q.max) return { error: `Pick at most ${q.max}.` };
       return { value: valid.map((v) => (v.startsWith(OTHER_PREFIX) ? v.trim() : v)) };
     }
+    case "choice": {
+      const picked = typeof raw === "string" ? raw : "";
+      if (!q.options.some((o) => o.id === picked)) return { error: "Pick one." };
+      return { value: picked };
+    }
     case "people": {
       // Optional: naming nobody is a normal answer, so an empty list is valid.
       if (raw === undefined || raw === null) return { value: [] };

@@ -49,6 +49,12 @@ export async function POST(request: Request) {
       Array.isArray(r.answers?.q32) ? (r.answers.q32 as string[]) : [],
     ]),
   );
+  const projectById = new Map(
+    responses.map((r) => [
+      r.participant_id,
+      typeof r.answers?.q33 === "string" ? r.answers.q33 : "",
+    ]),
+  );
 
   let runId: string | null = null;
   if (body.persist) {
@@ -79,6 +85,7 @@ export async function POST(request: Request) {
       survey_completed: Boolean(p.trait_completed_at),
       // Who they said they'd like. Shown next to the match, never scored.
       prefers: preferencesById.get(p.id) ?? [],
+      project: projectById.get(p.id) ?? "",
     })),
   });
 }

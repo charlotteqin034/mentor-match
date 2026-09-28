@@ -68,6 +68,12 @@ export function ProfileCardView({
           <dt className="label">Ideal relationship</dt>
           <dd className="mt-0.5 leading-snug">{card.ideal_relationship}</dd>
         </div>
+        {card.project && (
+          <div>
+            <dt className="label">Project</dt>
+            <dd className="mt-0.5 leading-snug">{card.project}</dd>
+          </div>
+        )}
         {card.values.length > 0 && (
           <div>
             <dt className="label">Hoping for</dt>

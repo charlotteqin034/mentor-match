@@ -7,7 +7,7 @@ import {
   type Question,
   type Role,
 } from "@/lib/questions";
-import { valueLabel } from "@/lib/profile-cards";
+import { projectLabel, valueLabel } from "@/lib/profile-cards";
 
 function renderAnswer(question: Question, value: unknown): React.ReactNode {
   switch (question.kind) {
@@ -38,6 +38,12 @@ function renderAnswer(question: Question, value: unknown): React.ReactNode {
     case "multi":
       return Array.isArray(value) ? (
         <span>{(value as string[]).map(valueLabel).join(" · ")}</span>
+      ) : (
+        <span className="text-faint">—</span>
+      );
+    case "choice":
+      return typeof value === "string" && value ? (
+        <span>{projectLabel(value)}</span>
       ) : (
         <span className="text-faint">—</span>
       );

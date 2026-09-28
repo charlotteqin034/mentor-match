@@ -329,6 +329,30 @@ describe("matching, override and publishing", () => {
 });
 
 describe("naming a preference", () => {
+  it("requires a project choice", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "trait_survey");
+    const noProject = answersAt(3);
+    delete noProject.q33;
+    const res = await traitRoute(
+      req("/api/trait-response", { token: people()[0].token, answers: noProject }),
+    );
+    expect(res.status).toBe(422);
+    expect(Object.keys((await json(res)).errors as object)).toEqual(["q33"]);
+  });
+
+  it("rejects a project that isn't on the list", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "trait_survey");
+    const res = await traitRoute(
+      req("/api/trait-response", {
+        token: people()[0].token,
+        answers: answersAt(3, { q33: "some-other-project" }),
+      }),
+    );
+    expect(res.status).toBe(422);
+  });
+
   it("stores the ids someone named", async () => {
     const roundId = await seedRound();
     await setStage(roundId, "trait_survey");

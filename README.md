@@ -34,6 +34,19 @@ No paid services anywhere.
 
 ---
 
+## The project question
+
+The survey ends with a section of its own asking which project someone wants to
+work on. The three options, with their PM, TL, mission and product, live in the
+`q33` entry in `src/lib/questions.ts` — editing them each semester is one edit
+in one place.
+
+Like preferences, the answer is **shown, not scored**: the Matching page puts
+each person's project next to their name and warns when an assigned pair chose
+different ones, but the optimiser pairs across projects freely. Making it a
+scored component, or a hard constraint, is a deliberate decision rather than a
+default.
+
 ## Preferences
 
 The last question asks whether there's anyone in particular someone would like

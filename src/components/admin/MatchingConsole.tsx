@@ -12,6 +12,7 @@ import {
   type WeightKey,
   type Weights,
 } from "@/lib/scoring";
+import { projectLabel } from "@/lib/profile-cards";
 import { ComponentBar, ComponentLegend } from "./ComponentBar";
 import { WeightSliders } from "./WeightSliders";
 
@@ -23,6 +24,8 @@ type Person = {
   survey_completed: boolean;
   /** Ids this person asked for, in the order they named them. */
   prefers: string[];
+  /** The project they chose, as a q33 option id. */
+  project: string;
 };
 
 type MatchResponse = {
@@ -189,6 +192,17 @@ export function MatchingConsole({
     return out;
   }, [pairs]);
 
+  /** Pairs who picked different projects — worth the organiser's eye. */
+  const projectSplit = useMemo(
+    () =>
+      pairs.filter((p) => {
+        const a = people.get(p.big_id)?.project;
+        const b = people.get(p.little_id)?.project;
+        return a && b && a !== b;
+      }),
+    [pairs, people],
+  );
+
   const totalScore = pairs.reduce((s, p) => s + p.total, 0);
   const average = pairs.length ? totalScore / pairs.length : 0;
   const blockedAssigned = pairs.filter((p) => p.blocked);
@@ -307,6 +321,20 @@ export function MatchingConsole({
                 <p className="mt-1">
                   These pairs are on the blocked list. That only happens when there was no legal
                   alternative — unblock someone or add a participant.
+                </p>
+              </div>
+            )}
+
+            {projectSplit.length > 0 && (
+              <div className="card border-warn/40 bg-warn-soft p-4 text-sm text-warn">
+                <p className="font-semibold">
+                  {projectSplit.length} pair{projectSplit.length === 1 ? "" : "s"} chose
+                  different projects
+                </p>
+                <p className="mt-1">
+                  Project choice isn&apos;t scored, so the matcher pairs across projects freely.
+                  If a pair needs to be on the same one, swap them by hand — or say the word and
+                  it can become a scored component.
                 </p>
               </div>
             )}
@@ -456,7 +484,10 @@ export function MatchingConsole({
                     <div key={person.id} className="grid gap-2 px-4 py-2.5 sm:grid-cols-[12rem_1fr_1fr]">
                       <div>
                         <p className="text-sm font-medium">{person.name}</p>
-                        <p className="text-xs text-faint">{person.role}</p>
+                        <p className="text-xs text-faint">
+                          {person.role}
+                          {person.project ? ` · ${projectLabel(person.project)}` : ""}
+                        </p>
                       </div>
 
                       <ol className="space-y-0.5 text-xs">

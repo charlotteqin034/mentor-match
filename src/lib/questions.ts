@@ -7,7 +7,7 @@
 
 export type Role = "big" | "little";
 
-export type SectionId = "about" | "how" | "looking";
+export type SectionId = "about" | "how" | "looking" | "project";
 
 export const SECTIONS: { id: SectionId; title: string; blurb?: string }[] = [
   {
@@ -21,6 +21,11 @@ export const SECTIONS: { id: SectionId; title: string; blurb?: string }[] = [
     blurb: "These three matter a lot. Be honest about the amount of contact you actually want.",
   },
   { id: "looking", title: "What you're looking for" },
+  {
+    id: "project",
+    title: "The project",
+    blurb: "Last one. Pick the project you'd most want to work on.",
+  },
 ];
 
 export const SCALE_MIN = 1;
@@ -53,7 +58,8 @@ export type ScoringMode =
   | "gap"
   | "jaccard"
   | "text"
-  | "preference";
+  | "preference"
+  | "display";
 
 type Base = {
   id: string;
@@ -116,7 +122,26 @@ export type PeopleQuestion = Base & {
   max: number;
 };
 
-export type Question = ScaleQuestion | MultiQuestion | TextQuestion | PeopleQuestion;
+/** One pick from a handful of richly described options. Not scored. */
+export type ChoiceQuestion = Base & {
+  kind: "choice";
+  mode: "display";
+  options: {
+    id: string;
+    label: string;
+    /** Who's running it. */
+    meta: string;
+    mission: string;
+    product: string;
+  }[];
+};
+
+export type Question =
+  | ScaleQuestion
+  | MultiQuestion
+  | TextQuestion
+  | PeopleQuestion
+  | ChoiceQuestion;
 
 const scale = (
   id: string,
@@ -193,10 +218,14 @@ export const QUESTIONS: Question[] = [
     low: "Goes with the flow",
     high: "Meticulous planner",
   }),
-  scale("q16", "about", "I prefer feedback that is…", "gentle/encouraging", "blunt/direct", {
-    low: "Wants gentle feedback",
-    high: "Wants blunt feedback",
-  }),
+  scale(
+    "q16",
+    "about",
+    "I prefer to give and get feedback that is…",
+    "gentle/encouraging",
+    "blunt/direct",
+    { low: "Gentle with feedback", high: "Blunt with feedback" },
+  ),
   scale("q17", "about", "I'd rather spend a weekend…", "relaxing at home", "doing something new", {
     low: "Homebody weekends",
     high: "Always up for something new",
@@ -317,6 +346,44 @@ export const QUESTIONS: Question[] = [
     mode: "preference",
     placeholder: "Start typing a name…",
     max: 5,
+  },
+
+  // ---- Section E: the project ---------------------------------------------
+  {
+    kind: "choice",
+    id: "q33",
+    section: "project",
+    text: "What project would you like to be a part of?",
+    mode: "display",
+    options: [
+      {
+        id: "casa_la",
+        label: "CASA of LA",
+        meta: "PM: Jamie · TL: Michelle",
+        mission:
+          "Advocate for children in Los Angeles County's child welfare system.",
+        product:
+          "An internal tool that maps youth addresses to congressional districts with heat map visualizations.",
+      },
+      {
+        id: "united_colors_of_cancer",
+        label: "United Colors of Cancer",
+        meta: "PM: Yirui · TL: Sophie",
+        mission:
+          "Advance cancer equity for BIPOC and underserved patients, survivors, caregivers, and families.",
+        product:
+          "A platform for children undergoing cancer treatment to safely socialize during periods of isolation through video chat and multiplayer games.",
+      },
+      {
+        id: "food_access_la",
+        label: "Food Access LA",
+        meta: "PM: Julia · TL: Gavin",
+        mission:
+          "Support farmers, feed Los Angeles, and be a supporting partner in equitable food systems.",
+        product:
+          "A centralized database and mapping platform for farmer and farmer's market data.",
+      },
+    ],
   },
 ];
 

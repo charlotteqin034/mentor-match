@@ -24,6 +24,7 @@ import {
   SECTIONS,
   questionsFor,
   questionsInSection,
+  type ChoiceQuestion,
   type MultiQuestion,
   type ScaleQuestion,
 } from "@/lib/questions";
@@ -38,15 +39,15 @@ const side = (id: string, over: Partial<Side> = {}): Side => ({
 
 describe("the question bank", () => {
   it("is 28 questions across three sections", () => {
-    expect(QUESTIONS).toHaveLength(29);
-    expect(SECTIONS.map((s) => s.id)).toEqual(["about", "how", "looking"]);
+    expect(QUESTIONS).toHaveLength(30);
+    expect(SECTIONS.map((s) => s.id)).toEqual(["about", "how", "looking", "project"]);
   });
 
   it("no longer carries the group-project role or the background question", () => {
     const ids = QUESTIONS.map((q) => q.id);
     expect(ids).not.toContain("q29");
     expect(ids).not.toContain("q30");
-    expect(ids.at(-1)).toBe("q32");
+    expect(ids.at(-1)).toBe("q33");
   });
 
   it("runs on a 1-5 scale, with everything derived from those bounds", () => {
@@ -71,6 +72,26 @@ describe("the question bank", () => {
   it("keeps 21 questions feeding trait similarity", () => {
     const similarity = SCALE_QUESTIONS.filter((q) => q.mode === "similarity");
     expect(similarity).toHaveLength(21);
+  });
+
+  it("ends on the project question, with all three options", () => {
+    const q33 = QUESTIONS_BY_ID.q33 as ChoiceQuestion;
+    expect(q33.section).toBe("project");
+    expect(q33.options.map((o) => o.label)).toEqual([
+      "CASA of LA",
+      "United Colors of Cancer",
+      "Food Access LA",
+    ]);
+    // Every option carries who's running it and what gets built.
+    for (const option of q33.options) {
+      expect(option.meta).toMatch(/PM: .+ · TL: .+/);
+      expect(option.mission.length).toBeGreaterThan(20);
+      expect(option.product.length).toBeGreaterThan(20);
+    }
+  });
+
+  it("asks both sides about feedback in a way that fits either", () => {
+    expect(QUESTIONS_BY_ID.q16.text).toBe("I prefer to give and get feedback that is…");
   });
 
   it("asks only littles what they want out of it", () => {

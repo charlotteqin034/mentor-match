@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { AnswerList } from "./AnswerList";
 import { ProfileCardView } from "@/components/ProfileCardView";
+import { QUESTIONS_BY_ID, type ChoiceQuestion } from "@/lib/questions";
+import { projectLabel } from "@/lib/profile-cards";
 import type { ProfileCard } from "@/lib/profile-cards";
 
 export type ResponseRow = {
@@ -16,19 +18,23 @@ export type ResponseRow = {
   preferences: string[];
 };
 
+const PROJECTS = (QUESTIONS_BY_ID.q33 as ChoiceQuestion).options;
+
 export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
   const [open, setOpen] = useState<string | null>(null);
   const [role, setRole] = useState<"all" | "big" | "little">("all");
+  const [project, setProject] = useState("all");
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
       if (role !== "all" && r.role !== role) return false;
+      if (project !== "all" && r.answers?.q33 !== project) return false;
       if (!q) return true;
       return r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q);
     });
-  }, [rows, role, query]);
+  }, [rows, role, project, query]);
 
   return (
     <div className="space-y-4">
@@ -47,6 +53,18 @@ export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
           <option value="all">Both roles</option>
           <option value="big">Bigs</option>
           <option value="little">Littles</option>
+        </select>
+        <select
+          className="input w-auto"
+          value={project}
+          onChange={(e) => setProject(e.target.value)}
+        >
+          <option value="all">Any project</option>
+          {PROJECTS.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
+          ))}
         </select>
         <span className="self-center text-xs text-muted">
           {filtered.length} of {rows.length}
@@ -67,6 +85,11 @@ export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
                 <span className="w-5 text-xs text-faint">{isOpen ? "▾" : "▸"}</span>
                 <span className="flex-1 font-medium">{row.name}</span>
                 <span className="w-16 text-xs text-muted">{row.role}</span>
+                <span className="w-36 truncate text-xs text-muted">
+                  {projectLabel(
+                    typeof row.answers?.q33 === "string" ? row.answers.q33 : "",
+                  )}
+                </span>
                 <span className="w-40 truncate text-right text-xs text-faint">
                   {row.preferences.length > 0 ? `asked for ${row.preferences.join(", ")}` : ""}
                 </span>
