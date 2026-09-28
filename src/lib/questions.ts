@@ -171,9 +171,9 @@ export const QUESTIONS: Question[] = [
     low: "Homebody weekends",
     high: "Always up for something new",
   }),
-  scale("q31", "about", "On a free day, I'd rather be…", "indoors at home", "out and about", {
-    low: "Happiest indoors",
-    high: "Happiest out and about",
+  scale("q31", "about", "On a free day, I'd rather be…", "out in nature", "out in the city", {
+    low: "Drawn to nature",
+    high: "Drawn to the city",
   }),
   scale("q18", "about", "I care more about…", "the journey", "the destination", {
     low: "In it for the journey",

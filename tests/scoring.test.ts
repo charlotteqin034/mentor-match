@@ -25,6 +25,7 @@ import {
   SECTIONS,
   questionsInSection,
   type MultiQuestion,
+  type ScaleQuestion,
 } from "@/lib/questions";
 import { answersAt } from "./fixtures";
 
@@ -61,6 +62,8 @@ describe("the question bank", () => {
     expect(ids).not.toContain("q9");
     expect(ids).toContain("q31");
     expect(QUESTIONS_BY_ID.q31.text).toBe("On a free day, I'd rather be…");
+    const q31 = QUESTIONS_BY_ID.q31 as ScaleQuestion;
+    expect([q31.low, q31.high]).toEqual(["out in nature", "out in the city"]);
     // It sits with the other lifestyle scales, not tacked on the end.
     const about = questionsInSection("about").map((q) => q.id);
     expect(about[about.indexOf("q31") - 1]).toBe("q17");
