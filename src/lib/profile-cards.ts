@@ -1,9 +1,10 @@
 /**
- * Stage 2 — anonymised profile card generation (§6).
+ * A readable summary of someone's answers.
  *
- * A card never carries a name, an email or a token. That anonymity is the
- * whole point of the stage: rankings should respond to the person described,
- * not to who they already know.
+ * This used to be an anonymous card that the other cohort ranked. With that
+ * round gone it's purely an organiser's view — built on the fly from stored
+ * answers rather than generated and stored, so there's nothing to regenerate
+ * and nothing to keep in sync.
  */
 
 import {
@@ -18,7 +19,6 @@ import type { Answers } from "./scoring";
 export type StandoutTrait = { label: string; source: string; value: number };
 
 export type ProfileCard = {
-  display_number: number;
   role: "big" | "little";
   values: string[];
   excited_about: string;
@@ -72,15 +72,10 @@ export function standoutTraits(answers: Answers): StandoutTrait[] {
     }));
 }
 
-export function buildCard(
-  role: "big" | "little",
-  displayNumber: number,
-  answers: Answers,
-): ProfileCard {
+export function buildCard(role: "big" | "little", answers: Answers): ProfileCard {
   const values = Array.isArray(answers.q26) ? (answers.q26 as string[]) : [];
 
   return {
-    display_number: displayNumber,
     role,
     values: values.map(valueLabel),
     excited_about: str(answers, "q27"),

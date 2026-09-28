@@ -8,10 +8,6 @@
  * cannot be computed returns `null` and is excluded from the weighted mean,
  * with the remaining weights renormalised — it is never scored as 0, because a
  * flat 0 for everyone still distorts the normalisation.
- *
- * The one deliberate exception is `ranking`: someone who never submitted a
- * ranking scores a real 0 there rather than null (§7 — ranking is optional
- * signal, and its absence shouldn't quietly inflate everything else).
  */
 
 import {
@@ -28,8 +24,7 @@ export type WeightKey =
   | "crossPref"
   | "closeness"
   | "values"
-  | "openText"
-  | "ranking";
+  | "openText";
 
 export type Weights = Record<WeightKey, number>;
 
@@ -39,7 +34,6 @@ export const WEIGHT_KEYS: WeightKey[] = [
   "closeness",
   "values",
   "openText",
-  "ranking",
 ];
 
 export const WEIGHT_LABELS: Record<WeightKey, string> = {
@@ -48,7 +42,6 @@ export const WEIGHT_LABELS: Record<WeightKey, string> = {
   closeness: "Closeness & logistics",
   values: "Values overlap",
   openText: "Open text",
-  ranking: "Mutual ranking",
 };
 
 export const DEFAULT_WEIGHTS: Weights = {
@@ -57,7 +50,6 @@ export const DEFAULT_WEIGHTS: Weights = {
   closeness: 0.25, // §8c
   values: 0.05, // §8d
   openText: 0.05, // §8e — excluded and renormalised when embeddings are off
-  ranking: 0.15, // §8f
 };
 
 export type Components = Record<WeightKey, number | null>;
@@ -75,8 +67,6 @@ export type Side = {
   answers: Answers | null;
   /** Open-text embedding; null/undefined when embeddings are disabled. */
   embedding?: number[] | null;
-  /** This person's submitted ranking of the other cohort. Empty = didn't rank. */
-  ranks?: { rankedId: string; rank: number }[];
 };
 
 // ---------------------------------------------------------------------------
@@ -241,33 +231,6 @@ export function openTextSimilarity(
 }
 
 // ---------------------------------------------------------------------------
-// §8f — ranking bonus
-// ---------------------------------------------------------------------------
-
-/**
- * A person ranked at position r out of K submitted ranks scores
- * (K − r + 1) / K: 1st of 5 → 1.0, 5th of 5 → 0.2.
- * Someone who ranked nobody, or who ranked others but not this person,
- * contributes 0 from their direction.
- */
-export function rankBonus(ranks: Side["ranks"], targetId: string): number {
-  if (!ranks || ranks.length === 0) return 0;
-  const k = ranks.length;
-  const entry = ranks.find((r) => r.rankedId === targetId);
-  if (!entry) return 0;
-  return (k - entry.rank + 1) / k;
-}
-
-export function rankingComponent(a: Side, b: Side): number {
-  const aToB = rankBonus(a.ranks, b.id);
-  const bToA = rankBonus(b.ranks, a.id);
-  if (aToB > 0 && bToA > 0) return (aToB + bToA) / 2;
-  // One-sided interest is real signal, but weaker — half credit.
-  if (aToB > 0 || bToA > 0) return Math.max(aToB, bToA) / 2;
-  return 0;
-}
-
-// ---------------------------------------------------------------------------
 // §8g — final score
 // ---------------------------------------------------------------------------
 
@@ -302,7 +265,6 @@ export function scorePair(a: Side, b: Side, weights: Weights = DEFAULT_WEIGHTS):
     closeness: closenessGap(a.answers, b.answers),
     values: valuesOverlap(a.answers, b.answers),
     openText: openTextSimilarity(a.embedding, b.embedding),
-    ranking: rankingComponent(a, b),
   };
   const { total, applied } = combine(components, weights);
   return { total, components, applied };

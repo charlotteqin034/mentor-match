@@ -10,6 +10,7 @@ import {
   type Question,
 } from "@/lib/questions";
 import { OTHER_PREFIX, missingQuestionIds } from "@/lib/validation";
+import { PeoplePicker, type Candidate } from "./PeoplePicker";
 import { ScaleRow } from "./ScaleRow";
 
 type Answers = Record<string, unknown>;
@@ -22,12 +23,15 @@ export function TraitSurvey({
   role,
   alreadyDone,
   serverAnswers,
+  candidates,
 }: {
   token: string;
   name: string;
   role: "big" | "little";
   alreadyDone: boolean;
   serverAnswers: Answers | null;
+  /** The other side's roster, for the preference question. */
+  candidates: Candidate[];
 }) {
   const [answers, setAnswers] = useState<Answers>(serverAnswers ?? {});
   const [editing, setEditing] = useState(!alreadyDone);
@@ -107,8 +111,8 @@ export function TraitSurvey({
             Thanks, {name.split(" ")[0]} — your answers are in.
           </h1>
           <p className="mt-3 text-sm text-muted">
-            Nothing else to do for now. When the ranking round opens you&apos;ll get a second
-            link, where you&apos;ll rank anonymous profiles of the {role === "big" ? "littles" : "bigs"}.
+            Nothing else to do — that&apos;s the whole thing. The organiser will be in touch
+            once the pairings are worked out.
           </p>
           <p className="mt-3 text-sm text-muted">
             You can still change your answers until the organiser closes this stage.
@@ -158,6 +162,7 @@ export function TraitSurvey({
                 value={answers[question.id]}
                 onChange={(v) => set(question.id, v)}
                 flagged={missing.includes(question.id)}
+                candidates={candidates}
               />
             ))}
           </div>
@@ -203,11 +208,13 @@ function QuestionBlock({
   value,
   onChange,
   flagged,
+  candidates,
 }: {
   question: Question;
   value: unknown;
   onChange: (value: unknown) => void;
   flagged: boolean;
+  candidates: Candidate[];
 }) {
   return (
     <fieldset
@@ -224,7 +231,12 @@ function QuestionBlock({
           {question.text}
         </p>
         <div className={question.kind === "scale" ? "mt-2 flex-1 sm:mt-0" : "mt-3"}>
-          <QuestionInput question={question} value={value} onChange={onChange} />
+          <QuestionInput
+            question={question}
+            value={value}
+            onChange={onChange}
+            candidates={candidates}
+          />
         </div>
       </div>
       {"hint" in question && question.hint && (
@@ -238,10 +250,12 @@ function QuestionInput({
   question,
   value,
   onChange,
+  candidates,
 }: {
   question: Question;
   value: unknown;
   onChange: (value: unknown) => void;
+  candidates: Candidate[];
 }) {
   switch (question.kind) {
     case "scale":
@@ -317,6 +331,17 @@ function QuestionInput({
         </div>
       );
     }
+
+    case "people":
+      return (
+        <PeoplePicker
+          candidates={candidates}
+          value={Array.isArray(value) ? (value as string[]) : []}
+          onChange={onChange}
+          placeholder={question.placeholder}
+          max={question.max}
+        />
+      );
 
     case "text": {
       const text = typeof value === "string" ? value : "";

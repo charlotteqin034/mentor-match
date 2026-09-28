@@ -5,9 +5,7 @@ import type { Stage } from "@/lib/types";
 
 /** Where someone should land once we know who they are. */
 export function destinationForStage(stage: Stage): string {
-  if (stage === "trait_survey") return "/s";
-  if (stage === "ranking_survey") return "/r";
-  return "/";
+  return stage === "trait_survey" ? "/s" : "/";
 }
 
 export async function POST(request: Request) {

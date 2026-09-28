@@ -12,7 +12,11 @@ export const OTHER_PREFIX = "other:";
 
 export type Errors = Record<string, string>;
 
-function checkOne(q: Question, raw: unknown): { error?: string; value?: unknown } {
+function checkOne(
+  q: Question,
+  raw: unknown,
+  candidateIds?: Set<string>,
+): { error?: string; value?: unknown } {
   switch (q.kind) {
     case "scale": {
       const n = typeof raw === "number" ? raw : Number(raw);
@@ -35,6 +39,18 @@ function checkOne(q: Question, raw: unknown): { error?: string; value?: unknown 
       if (valid.length > q.max) return { error: `Pick at most ${q.max}.` };
       return { value: valid.map((v) => (v.startsWith(OTHER_PREFIX) ? v.trim() : v)) };
     }
+    case "people": {
+      // Optional: naming nobody is a normal answer, so an empty list is valid.
+      if (raw === undefined || raw === null) return { value: [] };
+      if (!Array.isArray(raw)) return { error: "Pick names from the list." };
+      const ids = [...new Set(raw.filter((x): x is string => typeof x === "string"))];
+      if (ids.length > q.max) return { error: `Name at most ${q.max}.` };
+      // Only enforced server-side, where the roster is known.
+      if (candidateIds && ids.some((id) => !candidateIds.has(id))) {
+        return { error: "That list includes someone who isn't in this round." };
+      }
+      return { value: ids };
+    }
     case "text": {
       const s = typeof raw === "string" ? raw.trim() : "";
       if (!s) return { error: "This one's required." };
@@ -48,6 +64,7 @@ function checkOne(q: Question, raw: unknown): { error?: string; value?: unknown 
 export function validateAnswers(
   input: unknown,
   role?: Role,
+  candidateIds?: Set<string>,
 ): { ok: true; answers: Answers } | { ok: false; errors: Errors } {
   const raw = (input ?? {}) as Record<string, unknown>;
   const errors: Errors = {};
@@ -57,7 +74,7 @@ export function validateAnswers(
   // payload is dropped rather than validated — that's how a question the other
   // side answers, or one retired from the bank, stays out of stored answers.
   for (const q of questionsFor(role)) {
-    const { error, value } = checkOne(q, raw[q.id]);
+    const { error, value } = checkOne(q, raw[q.id], candidateIds);
     if (error) errors[q.id] = error;
     else answers[q.id] = value;
   }

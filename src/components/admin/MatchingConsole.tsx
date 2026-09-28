@@ -20,16 +20,15 @@ type Person = {
   name: string;
   email: string;
   role: "big" | "little";
-  display_number: number | null;
-  trait_completed: boolean;
-  ranking_completed: boolean;
+  survey_completed: boolean;
+  /** Ids this person asked for, in the order they named them. */
+  prefers: string[];
 };
 
 type MatchResponse = {
   run_id: string | null;
   weights: Weights;
   embeddings_used: boolean;
-  restricted: boolean;
   result: MatchResult;
   people: Person[];
 };
@@ -50,7 +49,6 @@ export function MatchingConsole({
   const router = useRouter();
   const [weights, setWeights] = useState<Weights>({ ...DEFAULT_WEIGHTS });
   const [embeddings, setEmbeddings] = useState(embeddingsDefault);
-  const [restrict, setRestrict] = useState(false);
   const [data, setData] = useState<MatchResponse | null>(null);
   const [pairs, setPairs] = useState<MatchedPair[]>([]);
   const [busy, setBusy] = useState(false);
@@ -64,12 +62,7 @@ export function MatchingConsole({
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const run = useCallback(
-    async (
-      persist: boolean,
-      nextWeights: Weights,
-      useEmbeddings: boolean,
-      restrictToShortlists: boolean,
-    ) => {
+    async (persist: boolean, nextWeights: Weights, useEmbeddings: boolean) => {
       setBusy(true);
       setError("");
       try {
@@ -78,7 +71,6 @@ export function MatchingConsole({
           weights: nextWeights,
           persist,
           embeddings: useEmbeddings,
-          restrict_to_shortlists: restrictToShortlists,
         });
         setData(res);
         setPairs(res.result.pairs);
@@ -104,15 +96,15 @@ export function MatchingConsole({
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(() => {
       const same = WEIGHT_KEYS.every((k) => data.weights[k] === weights[k]);
-      if (same && data.embeddings_used === embeddings && data.restricted === restrict) return;
-      void run(false, weights, embeddings, restrict);
+      if (same && data.embeddings_used === embeddings) return;
+      void run(false, weights, embeddings);
     }, 350);
     return () => {
       if (debounce.current) clearTimeout(debounce.current);
     };
     // `data` is intentionally excluded: it changes as a result of the run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weights, embeddings, restrict]);
+  }, [weights, embeddings]);
 
   const people = useMemo(
     () => new Map((data?.people ?? []).map((p) => [p.id, p])),
@@ -148,6 +140,54 @@ export function MatchingConsole({
     });
     return indices;
   }, [pairs, sort, people]);
+
+  /** Did either side of this pair ask for the other? */
+  const preferenceHit = useCallback(
+    (bigId: string, littleId: string) => {
+      const big = people.get(bigId);
+      const little = people.get(littleId);
+      return {
+        bigAsked: Boolean(big?.prefers.includes(littleId)),
+        littleAsked: Boolean(little?.prefers.includes(bigId)),
+      };
+    },
+    [people],
+  );
+
+  /** Everyone's best three options by score, straight off the matrix. */
+  const topThree = useMemo(() => {
+    const out = new Map<string, { id: string; score: number }[]>();
+    if (!data) return out;
+    const { matrix, big_ids, little_ids } = data.result;
+    big_ids.forEach((bigId, r) => {
+      out.set(
+        bigId,
+        little_ids
+          .map((id, c) => ({ id, score: matrix[r][c].total }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3),
+      );
+    });
+    little_ids.forEach((littleId, c) => {
+      out.set(
+        littleId,
+        big_ids
+          .map((id, r) => ({ id, score: matrix[r][c].total }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3),
+      );
+    });
+    return out;
+  }, [data]);
+
+  const assignedTo = useMemo(() => {
+    const out = new Map<string, string>();
+    for (const p of pairs) {
+      out.set(p.big_id, p.little_id);
+      out.set(p.little_id, p.big_id);
+    }
+    return out;
+  }, [pairs]);
 
   const totalScore = pairs.reduce((s, p) => s + p.total, 0);
   const average = pairs.length ? totalScore / pairs.length : 0;
@@ -209,29 +249,11 @@ export function MatchingConsole({
           </p>
         </div>
 
-        <div className="card p-4">
-          <h2 className="text-sm font-semibold">Shortlists</h2>
-          <label className="mt-2 flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="accent-accent"
-              checked={restrict}
-              onChange={(e) => setRestrict(e.target.checked)}
-            />
-            Only pair people who shortlisted each other
-          </label>
-          <p className="mt-2 text-xs text-muted">
-            Off by default. A shortlist-only assignment often has no perfect matching — six
-            littles can share the same five bigs — and the optimiser then has to force a pair
-            nobody shortlisted. Any it forces show up flagged below.
-          </p>
-        </div>
-
         <button
           type="button"
           className="btn btn-primary w-full"
           disabled={busy}
-          onClick={() => run(true, weights, embeddings, restrict)}
+          onClick={() => run(true, weights, embeddings)}
         >
           {busy ? "Working…" : data ? "Re-run and save" : "Run matching"}
         </button>
@@ -283,9 +305,8 @@ export function MatchingConsole({
                   {blockedAssigned.length === 1 ? " was" : "s were"} forced
                 </p>
                 <p className="mt-1">
-                  {restrict
-                    ? "These pairs weren't on either person's shortlist, but there was no legal alternative — the shortlists don't admit a perfect matching. Either accept these, widen the shortlists, or untick the restriction."
-                    : "These pairs are on the blocked list. That only happens when there was no legal alternative — unblock someone or add a participant."}
+                  These pairs are on the blocked list. That only happens when there was no legal
+                  alternative — unblock someone or add a participant.
                 </p>
               </div>
             )}
@@ -357,6 +378,7 @@ export function MatchingConsole({
                             <span className="w-14 text-right font-semibold tabular-nums">
                               {pair.total.toFixed(3)}
                             </span>
+                            <PreferenceBadge {...preferenceHit(pair.big_id, pair.little_id)} />
                             <span
                               className="w-24 text-right text-xs tabular-nums text-muted"
                               title="Where this little ranked among all littles for this big"
@@ -405,22 +427,8 @@ export function MatchingConsole({
                                 );
                               })}
                               <div className="text-xs text-muted sm:col-span-2 lg:col-span-3">
-                                {big?.name} was this little&apos;s #
-                                {pair.little_rank_of_big} option of{" "}
-                                {data.result.big_ids.length}.
-                                {(!big?.ranking_completed || !little?.ranking_completed) && (
-                                  <>
-                                    {" "}
-                                    {[
-                                      !big?.ranking_completed ? big?.name : null,
-                                      !little?.ranking_completed ? little?.name : null,
-                                    ]
-                                      .filter(Boolean)
-                                      .join(" and ")}{" "}
-                                    didn&apos;t submit a ranking, so that component scores 0 for
-                                    them.
-                                  </>
-                                )}
+                                {big?.name} was this little&apos;s #{pair.little_rank_of_big}{" "}
+                                option of {data.result.big_ids.length}.
                               </div>
                             </div>
                           )}
@@ -430,6 +438,75 @@ export function MatchingConsole({
                   })}
                 </tbody>
               </table>
+            </div>
+
+            <div className="card overflow-hidden">
+              <div className="border-b border-line px-4 py-3">
+                <h2 className="text-sm font-semibold">Everyone&apos;s best three</h2>
+                <p className="mt-1 text-xs text-muted">
+                  The three highest-scoring options for each person, and who they asked for by
+                  name. A ✓ marks the one they actually got.
+                </p>
+              </div>
+              <div className="divide-y divide-line/60">
+                {data.people.map((person) => {
+                  const best = topThree.get(person.id) ?? [];
+                  const got = assignedTo.get(person.id);
+                  return (
+                    <div key={person.id} className="grid gap-2 px-4 py-2.5 sm:grid-cols-[12rem_1fr_1fr]">
+                      <div>
+                        <p className="text-sm font-medium">{person.name}</p>
+                        <p className="text-xs text-faint">{person.role}</p>
+                      </div>
+
+                      <ol className="space-y-0.5 text-xs">
+                        {best.map((option, i) => {
+                          const isMatch = option.id === got;
+                          return (
+                            <li
+                              key={option.id}
+                              className={isMatch ? "font-medium text-accent" : "text-muted"}
+                            >
+                              {i + 1}. {people.get(option.id)?.name ?? "—"}{" "}
+                              <span className="tabular-nums text-faint">
+                                {option.score.toFixed(3)}
+                              </span>
+                              {isMatch && " ✓"}
+                            </li>
+                          );
+                        })}
+                        {best.length === 0 && <li className="text-faint">no options</li>}
+                      </ol>
+
+                      <div className="text-xs">
+                        {person.prefers.length === 0 ? (
+                          <span className="text-faint">no preference given</span>
+                        ) : (
+                          <ul className="space-y-0.5">
+                            {person.prefers.map((id) => {
+                              const isMatch = id === got;
+                              const inTop = best.some((b) => b.id === id);
+                              return (
+                                <li
+                                  key={id}
+                                  className={isMatch ? "font-medium text-accent" : "text-muted"}
+                                >
+                                  asked for {people.get(id)?.name ?? "(removed)"}
+                                  {isMatch
+                                    ? " ✓ got them"
+                                    : inTop
+                                      ? " · in their top 3"
+                                      : " · not in their top 3"}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <p className="text-xs text-muted">
@@ -449,7 +526,7 @@ function PairName({ person }: { person: Person | undefined }) {
   return (
     <span className="flex w-48 items-center gap-1.5">
       <span className="truncate font-medium">{person?.name}</span>
-      {person && !person.trait_completed && (
+      {person && !person.survey_completed && (
         <span
           className="shrink-0 rounded-full bg-warn-soft px-1.5 py-0.5 text-[10px] font-medium text-warn"
           title="No trait survey response — every trait component is excluded for this pair"
@@ -457,6 +534,34 @@ function PairName({ person }: { person: Person | undefined }) {
           no survey
         </span>
       )}
+    </span>
+  );
+}
+
+/** Marks a pair where one or both sides had asked for the other by name. */
+function PreferenceBadge({
+  bigAsked,
+  littleAsked,
+}: {
+  bigAsked: boolean;
+  littleAsked: boolean;
+}) {
+  if (!bigAsked && !littleAsked) return <span className="w-20" />;
+  const mutual = bigAsked && littleAsked;
+  return (
+    <span
+      className={`w-20 rounded-full px-2 py-0.5 text-center text-[10px] font-medium ${
+        mutual ? "bg-accent text-white" : "bg-accent-soft text-accent"
+      }`}
+      title={
+        mutual
+          ? "Both of them asked for each other"
+          : bigAsked
+            ? "The big asked for this little"
+            : "The little asked for this big"
+      }
+    >
+      {mutual ? "both asked" : "asked for"}
     </span>
   );
 }

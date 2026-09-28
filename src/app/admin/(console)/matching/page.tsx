@@ -18,7 +18,6 @@ export default async function MatchingPage() {
 
   const participants = await getParticipants(round.id);
   const withoutTraits = participants.filter((p) => !p.trait_completed_at);
-  const rankingDone = participants.filter((p) => p.ranking_completed_at).length;
 
   return (
     <div className="space-y-6">
@@ -51,10 +50,6 @@ export default async function MatchingPage() {
         </div>
       )}
 
-      <p className="text-xs text-muted">
-        {rankingDone} of {participants.length} submitted a ranking. Matching doesn&apos;t wait
-        for the rest — a missing ranking just scores 0 on that one component.
-      </p>
 
       <MatchingConsole
         roundId={round.id}

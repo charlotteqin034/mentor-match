@@ -8,7 +8,7 @@ create table if not exists rounds (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   stage text not null default 'setup'
-    check (stage in ('setup','trait_survey','profiles_generated','ranking_survey','matching','published')),
+    check (stage in ('setup','trait_survey','matching','published')),
   published_run_id uuid,            -- set at publish time; points at match_runs.id
   created_at timestamptz default now()
 );
@@ -23,9 +23,7 @@ create table if not exists participants (
   name text not null,
   email text not null,
   token text not null unique,          -- random 32-char, used in magic links
-  display_number int,                  -- assigned at profile generation: "Profile #14"
   trait_completed_at timestamptz,
-  ranking_completed_at timestamptz,
   created_at timestamptz default now()
 );
 
@@ -40,30 +38,6 @@ create table if not exists trait_responses (
   answers jsonb not null,              -- { "q1": 5, "q26": ["career_clarity","network"], "q27": "..." }
   submitted_at timestamptz default now()
 );
-
--- ---------------------------------------------------------------------------
--- Anonymised profile cards
--- ---------------------------------------------------------------------------
-create table if not exists profile_cards (
-  participant_id uuid primary key references participants(id) on delete cascade,
-  display_number int not null,
-  card jsonb not null,
-  generated_at timestamptz default now()
-);
-
--- ---------------------------------------------------------------------------
--- Rankings — one row per (ranker, ranked) pair in a submitted ranking
--- ---------------------------------------------------------------------------
-create table if not exists rankings (
-  id uuid primary key default gen_random_uuid(),
-  ranker_id uuid references participants(id) on delete cascade,
-  ranked_id uuid references participants(id) on delete cascade,
-  rank int not null,                   -- 1 = top choice
-  submitted_at timestamptz default now(),
-  unique (ranker_id, ranked_id)
-);
-
-create index if not exists rankings_ranker_idx on rankings (ranker_id);
 
 -- ---------------------------------------------------------------------------
 -- Pairs the organiser never wants matched
@@ -113,31 +87,7 @@ create table if not exists text_embeddings (
 alter table rounds           enable row level security;
 alter table participants     enable row level security;
 alter table trait_responses  enable row level security;
-alter table profile_cards    enable row level security;
-alter table rankings         enable row level security;
 alter table blocked_pairs    enable row level security;
 alter table match_runs       enable row level security;
 alter table text_embeddings  enable row level security;
 
--- ---------------------------------------------------------------------------
--- Ranking shortlists
---
--- Stage 3 no longer shows everyone the whole other cohort. The organiser
--- generates a shortlist of the best-scoring candidates per person, and people
--- rank within that. One row per (person, candidate) they were offered.
--- ---------------------------------------------------------------------------
-create table if not exists shortlists (
-  id uuid primary key default gen_random_uuid(),
-  round_id uuid references rounds(id) on delete cascade,
-  participant_id uuid references participants(id) on delete cascade,
-  candidate_id uuid references participants(id) on delete cascade,
-  position int not null,            -- 1 = the algorithm's own best guess
-  score numeric not null,           -- pre-ranking score, so the admin can inspect it
-  generated_at timestamptz default now(),
-  unique (participant_id, candidate_id)
-);
-
-create index if not exists shortlists_participant_idx on shortlists (participant_id, position);
-create index if not exists shortlists_round_idx on shortlists (round_id);
-
-alter table shortlists enable row level security;

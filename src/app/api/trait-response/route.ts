@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
-import { getParticipantByToken } from "@/lib/data";
+import { getParticipantByToken, getParticipants } from "@/lib/data";
 import { validateAnswers } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -19,7 +19,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "The trait survey is closed." }, { status: 409 });
   }
 
-  const validated = validateAnswers(body.answers, participant.role);
+  // The preference question names people, so it's validated against the roster.
+  const everyone = await getParticipants(round.id);
+  const candidateIds = new Set(
+    everyone.filter((p) => p.role !== participant.role).map((p) => p.id),
+  );
+  const validated = validateAnswers(body.answers, participant.role, candidateIds);
   if (!validated.ok) {
     return NextResponse.json(
       { error: "Some answers are missing.", errors: validated.errors },

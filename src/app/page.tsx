@@ -60,44 +60,34 @@ export default async function Home() {
       ? { name: existing.participant.name, next: destinationForStage(round.stage) }
       : null;
 
-  if (round.stage === "trait_survey" || round.stage === "ranking_survey") {
-    const isTrait = round.stage === "trait_survey";
+  if (round.stage === "trait_survey") {
     const participants = await getParticipants(round.id);
     const people: PickerPerson[] = participants
       .map((p) => ({
         id: p.id,
         name: p.name,
         role: p.role,
-        done: Boolean(isTrait ? p.trait_completed_at : p.ranking_completed_at),
+        done: Boolean(p.trait_completed_at),
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
     return (
-      <Shell
-        eyebrow={round.name}
-        title={isTrait ? "Let's find out who you are." : "Time to pick your people."}
-      >
+      <Shell eyebrow={round.name} title="Let's find out who you are.">
         <p className="mb-5 text-sm text-muted">
-          {isTrait
-            ? `${QUESTIONS.length} quick questions, about ten minutes. Your answers are used to pair you with someone — only the organiser ever sees them.`
-            : "You'll see anonymous profiles of the other side and put your favourites in order. No names, deliberately."}
+          {QUESTIONS.length} quick questions, about ten minutes. Your answers are used to pair
+          you with someone — only the organiser ever sees them.
         </p>
-        <NamePicker
-          people={people}
-          actionLabel={isTrait ? "Start the survey" : "Open the ranking round"}
-          returning={returning}
-        />
+        <NamePicker people={people} actionLabel="Start the survey" returning={returning} />
       </Shell>
     );
   }
 
-  if (round.stage === "setup" || round.stage === "profiles_generated") {
+  if (round.stage === "setup") {
     return (
       <Shell eyebrow={round.name} title="Not open just yet.">
         <p className="text-sm text-muted">
-          {round.stage === "setup"
-            ? "The survey hasn't opened. Keep this link — it's the only one you'll need."
-            : "The trait survey has closed and the ranking round hasn't started. Keep this link; it'll take you straight in when it opens."}
+          The survey hasn&apos;t opened. Keep this link — it&apos;s the only one you&apos;ll
+          need.
         </p>
       </Shell>
     );
@@ -106,8 +96,8 @@ export default async function Home() {
   return (
     <Shell eyebrow={round.name} title="That's everything from you.">
       <p className="text-sm text-muted">
-        Both surveys are closed and matching is underway. The organiser will be in touch about
-        who you&apos;ve been paired with.
+        The survey is closed and matching is underway. The organiser will be in touch about who
+        you&apos;ve been paired with.
       </p>
     </Shell>
   );

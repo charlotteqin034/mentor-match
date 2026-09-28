@@ -1,33 +1,21 @@
-import type { ProfileCard } from "./profile-cards";
 import type { Components, WeightKey, Weights } from "./scoring";
 import type { Answers } from "./scoring";
 
-export const STAGES = [
-  "setup",
-  "trait_survey",
-  "profiles_generated",
-  "ranking_survey",
-  "matching",
-  "published",
-] as const;
+export const STAGES = ["setup", "trait_survey", "matching", "published"] as const;
 
 export type Stage = (typeof STAGES)[number];
 
 export const STAGE_LABELS: Record<Stage, string> = {
   setup: "Setup",
-  trait_survey: "Trait survey open",
-  profiles_generated: "Profiles generated",
-  ranking_survey: "Ranking survey open",
+  trait_survey: "Survey open",
   matching: "Matching",
   published: "Published",
 };
 
 export const STAGE_BLURBS: Record<Stage, string> = {
-  setup: "Add participants and hand out links. No survey is reachable yet.",
-  trait_survey: "Participants can fill in and edit the 30-question trait survey.",
-  profiles_generated: "Trait survey is closed. Cards are built; ranking hasn't opened.",
-  ranking_survey: "Participants can rank the other cohort's anonymous cards.",
-  matching: "Both surveys closed. Tune weights and run the match.",
+  setup: "Add participants and hand out the link. The survey isn't reachable yet.",
+  trait_survey: "Participants can fill in and edit their answers.",
+  matching: "Survey closed. Tune weights and run the match.",
   published: "Pairings are final. Export the CSV and send it out.",
 };
 
@@ -46,9 +34,7 @@ export type Participant = {
   name: string;
   email: string;
   token: string;
-  display_number: number | null;
   trait_completed_at: string | null;
-  ranking_completed_at: string | null;
   created_at: string;
 };
 
@@ -56,31 +42,6 @@ export type TraitResponse = {
   participant_id: string;
   answers: Answers;
   submitted_at: string;
-};
-
-export type ProfileCardRow = {
-  participant_id: string;
-  display_number: number;
-  card: ProfileCard;
-  generated_at: string;
-};
-
-export type RankingRow = {
-  id: string;
-  ranker_id: string;
-  ranked_id: string;
-  rank: number;
-  submitted_at: string;
-};
-
-export type ShortlistRow = {
-  id: string;
-  round_id: string;
-  participant_id: string;
-  candidate_id: string;
-  position: number;
-  score: number;
-  generated_at: string;
 };
 
 export type BlockedPair = {

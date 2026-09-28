@@ -13,9 +13,6 @@ const TABLES = [
   "rounds",
   "participants",
   "trait_responses",
-  "profile_cards",
-  "rankings",
-  "shortlists",
   "blocked_pairs",
   "match_runs",
   "text_embeddings",
@@ -25,9 +22,6 @@ const PRIMARY_KEY: Record<string, string> = {
   rounds: "id",
   participants: "id",
   trait_responses: "participant_id",
-  profile_cards: "participant_id",
-  rankings: "id",
-  shortlists: "id",
   blocked_pairs: "id",
   match_runs: "id",
   text_embeddings: "participant_id",
@@ -35,15 +29,8 @@ const PRIMARY_KEY: Record<string, string> = {
 
 const DEFAULTS: Record<string, () => Row> = {
   rounds: () => ({ stage: "setup", published_run_id: null }),
-  participants: () => ({
-    display_number: null,
-    trait_completed_at: null,
-    ranking_completed_at: null,
-  }),
+  participants: () => ({ trait_completed_at: null }),
   trait_responses: () => ({ submitted_at: new Date().toISOString() }),
-  profile_cards: () => ({ generated_at: new Date().toISOString() }),
-  rankings: () => ({ submitted_at: new Date().toISOString() }),
-  shortlists: () => ({ generated_at: new Date().toISOString() }),
   blocked_pairs: () => ({}),
   match_runs: () => ({ total_score: null }),
   text_embeddings: () => ({}),
@@ -244,17 +231,11 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: Error | null }> {
   private cascade(removed: Row[]) {
     if (this.table === "participants") {
       const ids = new Set(removed.map((r) => r.id));
-      for (const t of ["trait_responses", "profile_cards", "text_embeddings"]) {
+      for (const t of ["trait_responses", "text_embeddings"]) {
         this.store.tables[t] = this.store.tables[t].filter(
           (r) => !ids.has(r.participant_id as string),
         );
       }
-      this.store.tables.rankings = this.store.tables.rankings.filter(
-        (r) => !ids.has(r.ranker_id as string) && !ids.has(r.ranked_id as string),
-      );
-      this.store.tables.shortlists = this.store.tables.shortlists.filter(
-        (r) => !ids.has(r.participant_id as string) && !ids.has(r.candidate_id as string),
-      );
       this.store.tables.blocked_pairs = this.store.tables.blocked_pairs.filter(
         (r) => !ids.has(r.participant_a as string) && !ids.has(r.participant_b as string),
       );

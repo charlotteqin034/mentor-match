@@ -8,7 +8,6 @@ import {
   expectedPartnerAnswer,
   jaccard,
   openTextSimilarity,
-  rankingComponent,
   scorePair,
   traitSimilarity,
   valuesOverlap,
@@ -34,13 +33,12 @@ import { answersAt } from "./fixtures";
 const side = (id: string, over: Partial<Side> = {}): Side => ({
   id,
   answers: answersAt(3),
-  ranks: [],
   ...over,
 });
 
 describe("the question bank", () => {
   it("is 28 questions across three sections", () => {
-    expect(QUESTIONS).toHaveLength(28);
+    expect(QUESTIONS).toHaveLength(29);
     expect(SECTIONS.map((s) => s.id)).toEqual(["about", "how", "looking"]);
   });
 
@@ -48,7 +46,7 @@ describe("the question bank", () => {
     const ids = QUESTIONS.map((q) => q.id);
     expect(ids).not.toContain("q29");
     expect(ids).not.toContain("q30");
-    expect(ids.at(-1)).toBe("q28");
+    expect(ids.at(-1)).toBe("q32");
   });
 
   it("runs on a 1-5 scale, with everything derived from those bounds", () => {
@@ -258,47 +256,6 @@ describe("§8e open text", () => {
   });
 });
 
-describe("§8f ranking bonus", () => {
-  const withRanks = (id: string, ranks: [string, number][]): Side => ({
-    id,
-    answers: answersAt(3),
-    ranks: ranks.map(([rankedId, rank]) => ({ rankedId, rank })),
-  });
-
-  it("scores a mutual first choice at 1.0", () => {
-    const a = withRanks("a", [["b", 1], ["x", 2], ["y", 3], ["z", 4], ["w", 5]]);
-    const b = withRanks("b", [["a", 1], ["x", 2], ["y", 3], ["z", 4], ["w", 5]]);
-    expect(rankingComponent(a, b)).toBe(1);
-  });
-
-  it("scores a one-sided first choice at 0.5", () => {
-    const a = withRanks("a", [["b", 1], ["x", 2], ["y", 3], ["z", 4], ["w", 5]]);
-    const b = withRanks("b", [["x", 1], ["y", 2], ["z", 3], ["w", 4], ["v", 5]]);
-    expect(rankingComponent(a, b)).toBe(0.5);
-  });
-
-  it("scores an unranked pair at 0", () => {
-    const a = withRanks("a", []);
-    const b = withRanks("b", []);
-    expect(rankingComponent(a, b)).toBe(0);
-  });
-
-  it("decays with position: last of five is 0.2", () => {
-    const a = withRanks("a", [["x", 1], ["y", 2], ["z", 3], ["w", 4], ["b", 5]]);
-    const b = withRanks("b", []);
-    expect(rankingComponent(a, b)).toBeCloseTo(0.1, 10); // 0.2, halved for one-sidedness
-  });
-
-  it("normalises by list length, so a shortlist of 8 is not worth more", () => {
-    const eight: [string, number][] = ["b", "p", "q", "r", "s", "t", "u", "v"].map(
-      (id, i) => [id, i + 1] as [string, number],
-    );
-    const a = withRanks("a", eight);
-    const b = withRanks("b", [["a", 1]]);
-    expect(rankingComponent(a, b)).toBe(1); // both had each other at #1
-  });
-});
-
 describe("§8g combining and renormalisation", () => {
   it("excludes null components and renormalises the rest", () => {
     const { total, applied } = combine(
@@ -308,7 +265,6 @@ describe("§8g combining and renormalisation", () => {
         closeness: 1,
         values: 1,
         openText: null,
-        ranking: 1,
       },
       DEFAULT_WEIGHTS,
     );
@@ -320,11 +276,11 @@ describe("§8g combining and renormalisation", () => {
 
   it("does not let a disabled component drag scores down", () => {
     const withText = combine(
-      { traits: 1, crossPref: 1, closeness: 1, values: 1, openText: 1, ranking: 1 },
+      { traits: 1, crossPref: 1, closeness: 1, values: 1, openText: 1 },
       DEFAULT_WEIGHTS,
     );
     const withoutText = combine(
-      { traits: 1, crossPref: 1, closeness: 1, values: 1, openText: null, ranking: 1 },
+      { traits: 1, crossPref: 1, closeness: 1, values: 1, openText: null },
       DEFAULT_WEIGHTS,
     );
     expect(withoutText.total).toBeCloseTo(withText.total, 10);
@@ -332,12 +288,12 @@ describe("§8g combining and renormalisation", () => {
 
   it("keeps totals inside [0, 1] with embeddings disabled", () => {
     const best = scorePair(
-      { id: "a", answers: answersAt(3), ranks: [{ rankedId: "b", rank: 1 }] },
-      { id: "b", answers: answersAt(3), ranks: [{ rankedId: "a", rank: 1 }] },
+      { id: "a", answers: answersAt(3) },
+      { id: "b", answers: answersAt(3) },
     );
     const worst = scorePair(
-      { id: "a", answers: answersAt(1, { q10: 1 }), ranks: [] },
-      { id: "b", answers: answersAt(5, { q10: 5 }), ranks: [] },
+      { id: "a", answers: answersAt(1, { q10: 1 }) },
+      { id: "b", answers: answersAt(5, { q10: 5 }) },
     );
     expect(best.components.openText).toBeNull();
     expect(best.total).toBeLessThanOrEqual(1);

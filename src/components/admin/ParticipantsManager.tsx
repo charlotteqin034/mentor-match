@@ -200,9 +200,6 @@ export function ParticipantsManager({
                   <tr key={p.id} className="border-b border-line/60 last:border-0">
                     <td className="px-4 py-2">
                       {p.name}
-                      {p.display_number && (
-                        <span className="ml-2 text-xs text-faint">#{p.display_number}</span>
-                      )}
                     </td>
                     <td className="px-4 py-2 text-muted">{p.email}</td>
                     <td className="px-4 py-2">

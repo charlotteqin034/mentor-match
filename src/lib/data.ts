@@ -6,10 +6,7 @@ import type {
   BlockedPair,
   MatchRun,
   Participant,
-  ProfileCardRow,
-  RankingRow,
   Round,
-  ShortlistRow,
   TraitResponse,
 } from "./types";
 
@@ -78,49 +75,6 @@ export async function getTraitResponse(participantId: string): Promise<TraitResp
   return (data as TraitResponse) ?? null;
 }
 
-export async function getProfileCards(participantIds: string[]): Promise<ProfileCardRow[]> {
-  if (participantIds.length === 0) return [];
-  const { data, error } = await db()
-    .from("profile_cards")
-    .select("*")
-    .in("participant_id", participantIds)
-    .order("display_number", { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data ?? []) as ProfileCardRow[];
-}
-
-export async function getRankings(participantIds: string[]): Promise<RankingRow[]> {
-  if (participantIds.length === 0) return [];
-  const { data, error } = await db()
-    .from("rankings")
-    .select("*")
-    .in("ranker_id", participantIds)
-    .order("rank", { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data ?? []) as RankingRow[];
-}
-
-export async function getShortlists(participantIds: string[]): Promise<ShortlistRow[]> {
-  if (participantIds.length === 0) return [];
-  const { data, error } = await db()
-    .from("shortlists")
-    .select("*")
-    .in("participant_id", participantIds)
-    .order("position", { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data ?? []) as ShortlistRow[];
-}
-
-export async function getRoundShortlists(roundId: string): Promise<ShortlistRow[]> {
-  const { data, error } = await db()
-    .from("shortlists")
-    .select("*")
-    .eq("round_id", roundId)
-    .order("position", { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data ?? []) as ShortlistRow[];
-}
-
 export async function getBlockedPairs(roundId: string): Promise<BlockedPair[]> {
   const { data, error } = await db().from("blocked_pairs").select("*").eq("round_id", roundId);
   if (error) throw new Error(error.message);
@@ -157,19 +111,12 @@ export async function loadMatchInput(
 }> {
   const participants = await getParticipants(roundId);
   const ids = participants.map((p) => p.id);
-  const [responses, rankings, blocked] = await Promise.all([
+  const [responses, blocked] = await Promise.all([
     getTraitResponses(ids),
-    getRankings(ids),
     getBlockedPairs(roundId),
   ]);
 
   const answersById = new Map(responses.map((r) => [r.participant_id, r.answers]));
-  const ranksById = new Map<string, { rankedId: string; rank: number }[]>();
-  for (const r of rankings) {
-    const list = ranksById.get(r.ranker_id) ?? [];
-    list.push({ rankedId: r.ranked_id, rank: r.rank });
-    ranksById.set(r.ranker_id, list);
-  }
 
   const embeddings = await loadEmbeddings(
     participants.map((p) => ({ id: p.id, answers: answersById.get(p.id) ?? null })),
@@ -181,10 +128,8 @@ export async function loadMatchInput(
     name: p.name,
     email: p.email,
     role: p.role,
-    display_number: p.display_number,
     answers: answersById.get(p.id) ?? null,
     embedding: embeddings.get(p.id) ?? null,
-    ranks: ranksById.get(p.id) ?? [],
   });
 
   return {

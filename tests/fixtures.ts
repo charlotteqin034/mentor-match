@@ -56,23 +56,9 @@ export function syntheticCohort(
       name: `${role === "big" ? "Big" : "Little"} ${i}`,
       email: `${role}${i}@example.test`,
       role,
-      display_number: i + 1,
       answers,
       embedding: null,
-      ranks: [],
     } satisfies MatchParticipant;
   });
 }
 
-/** Give each person in `rankers` a 5-long ranking drawn from `pool`. */
-export function addRankings(
-  rankers: MatchParticipant[],
-  pool: MatchParticipant[],
-  seed: number,
-): void {
-  const rand = mulberry32(seed);
-  for (const r of rankers) {
-    const shuffled = [...pool].sort(() => rand() - 0.5);
-    r.ranks = shuffled.slice(0, 5).map((p, idx) => ({ rankedId: p.id, rank: idx + 1 }));
-  }
-}

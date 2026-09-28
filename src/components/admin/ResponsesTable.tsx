@@ -10,10 +10,10 @@ export type ResponseRow = {
   name: string;
   email: string;
   role: "big" | "little";
-  display_number: number | null;
   submitted_at: string | null;
   answers: Record<string, unknown> | null;
   card: ProfileCard | null;
+  preferences: string[];
 };
 
 export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
@@ -67,8 +67,8 @@ export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
                 <span className="w-5 text-xs text-faint">{isOpen ? "▾" : "▸"}</span>
                 <span className="flex-1 font-medium">{row.name}</span>
                 <span className="w-16 text-xs text-muted">{row.role}</span>
-                <span className="w-16 text-right text-xs tabular-nums text-faint">
-                  {row.display_number ? `#${row.display_number}` : "—"}
+                <span className="w-40 truncate text-right text-xs text-faint">
+                  {row.preferences.length > 0 ? `asked for ${row.preferences.join(", ")}` : ""}
                 </span>
                 <span className="w-24 text-right text-xs">
                   {row.submitted_at ? (
@@ -85,14 +85,11 @@ export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
                     <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
                       <AnswerList answers={row.answers} role={row.role} />
                       <div>
-                        <p className="label mb-2">Profile card preview</p>
+                        <p className="label mb-2">At a glance</p>
                         {row.card ? (
-                          <ProfileCardView card={row.card} showRole />
+                          <ProfileCardView card={row.card} />
                         ) : (
-                          <p className="text-sm text-muted">
-                            Not generated yet — run &ldquo;Generate profile cards&rdquo; on the
-                            overview.
-                          </p>
+                          <p className="text-sm text-muted">No answers yet.</p>
                         )}
                       </div>
                     </div>

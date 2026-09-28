@@ -26,15 +26,13 @@ export async function GET(request: Request) {
   if (kind === "links") {
     const origin = url.origin;
     const csv = toCsv(
-      ["name", "email", "role", "trait_survey_link", "ranking_survey_link", "done_trait", "done_ranking"],
+      ["name", "email", "role", "survey_link", "done"],
       participants.map((p) => [
         p.name,
         p.email,
         p.role,
         `${origin}/s/${p.token}`,
-        `${origin}/r/${p.token}`,
         p.trait_completed_at ? "yes" : "no",
-        p.ranking_completed_at ? "yes" : "no",
       ]),
     );
     return csvResponse(`${slug}-links.csv`, csv);

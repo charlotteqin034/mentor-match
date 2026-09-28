@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Gate } from "@/components/Gate";
 import { IdentityBar } from "@/components/IdentityBar";
 import { TraitSurvey } from "@/components/TraitSurvey";
-import { getParticipantByToken, getTraitResponse } from "@/lib/data";
+import { getParticipantByToken, getParticipants, getTraitResponse } from "@/lib/data";
 import { supabaseConfigured } from "@/lib/env";
 
 /**
@@ -73,18 +73,20 @@ export async function TraitSurveyScreen({
             ? "Your answers are safely in — thanks for getting them done."
             : "It looks like this one closed before your answers came in. Let the organiser know."}
         </p>
-        <p>
-          The ranking round comes next, and it opens from{" "}
-          <Link href="/" className="text-accent underline">
-            the same starting page
-          </Link>
-          .
-        </p>
+
       </Gate>
     );
   }
 
   const response = await getTraitResponse(participant.id);
+
+  // The other side's roster feeds the preference type-ahead. Names only — no
+  // emails, and nothing about their answers.
+  const everyone = await getParticipants(round.id);
+  const candidates = everyone
+    .filter((p) => p.role !== participant.role)
+    .map((p) => ({ id: p.id, name: p.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <>
@@ -95,6 +97,7 @@ export async function TraitSurveyScreen({
         role={participant.role}
         alreadyDone={Boolean(participant.trait_completed_at)}
         serverAnswers={response?.answers ?? null}
+        candidates={candidates}
       />
     </>
   );

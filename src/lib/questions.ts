@@ -47,7 +47,13 @@ export const SCALE_INSTRUCTION =
  *  - jaccard     : set overlap                               (§8d)
  *  - text        : embeddings when enabled, else display only(§8e)
  */
-export type ScoringMode = "similarity" | "cross_pref" | "gap" | "jaccard" | "text";
+export type ScoringMode =
+  | "similarity"
+  | "cross_pref"
+  | "gap"
+  | "jaccard"
+  | "text"
+  | "preference";
 
 type Base = {
   id: string;
@@ -95,7 +101,22 @@ export type TextQuestion = Base & {
   maxLength: number;
 };
 
-export type Question = ScaleQuestion | MultiQuestion | TextQuestion;
+/**
+ * Names picked from the other side of the round.
+ *
+ * The only question whose options aren't in this file — they're the people in
+ * the round, so they're injected at render time. Optional by design: "no
+ * preference" is the common and perfectly good answer.
+ */
+export type PeopleQuestion = Base & {
+  kind: "people";
+  mode: "preference";
+  placeholder: string;
+  hint: string;
+  max: number;
+};
+
+export type Question = ScaleQuestion | MultiQuestion | TextQuestion | PeopleQuestion;
 
 const scale = (
   id: string,
@@ -271,7 +292,7 @@ export const QUESTIONS: Question[] = [
     id: "q27",
     section: "looking",
     text: "What's something you're genuinely excited about right now — in or outside your field?",
-    hint: "One or two sentences. This one shows up on your profile card word for word.",
+    hint: "One or two sentences. The organiser reads this when they're sanity-checking the pairings.",
     mode: "text",
     placeholder: "Anything at all — a project, a band, a rabbit hole you fell down…",
     maxLength: 400,
@@ -281,12 +302,22 @@ export const QUESTIONS: Question[] = [
     id: "q28",
     section: "looking",
     text: "In one sentence, describe your ideal big/little relationship.",
-    hint: "One sentence. Also shown on your profile card verbatim.",
+    hint: "One sentence.",
     mode: "text",
     placeholder: "e.g. Someone I can text a half-formed question at 11pm.",
     maxLength: 280,
   },
 
+  {
+    kind: "people",
+    id: "q32",
+    section: "looking",
+    text: "Anyone in particular you'd like to be paired with?",
+    hint: "Totally optional, and not a guarantee — the organiser sees it and weighs it up. Start typing a name.",
+    mode: "preference",
+    placeholder: "Start typing a name…",
+    max: 5,
+  },
 ];
 
 export const QUESTIONS_BY_ID: Record<string, Question> = Object.fromEntries(

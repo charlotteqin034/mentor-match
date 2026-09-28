@@ -1,7 +1,8 @@
 import { ConfigError } from "@/components/admin/ConfigError";
 import { ResponsesTable, type ResponseRow } from "@/components/admin/ResponsesTable";
 import { getSelectedRound } from "@/lib/admin";
-import { getParticipants, getProfileCards, getTraitResponses } from "@/lib/data";
+import { getParticipants, getTraitResponses } from "@/lib/data";
+import { buildCard } from "@/lib/profile-cards";
 
 export const dynamic = "force-dynamic";
 
@@ -16,21 +17,25 @@ export default async function ResponsesPage() {
 
   const participants = await getParticipants(round.id);
   const ids = participants.map((p) => p.id);
-  const [responses, cards] = await Promise.all([getTraitResponses(ids), getProfileCards(ids)]);
-
+  const responses = await getTraitResponses(ids);
   const answersById = new Map(responses.map((r) => [r.participant_id, r]));
-  const cardById = new Map(cards.map((c) => [c.participant_id, c.card]));
+  const nameById = new Map(participants.map((p) => [p.id, p.name]));
 
-  const rows: ResponseRow[] = participants.map((p) => ({
-    id: p.id,
-    name: p.name,
-    email: p.email,
-    role: p.role,
-    display_number: p.display_number,
-    submitted_at: answersById.get(p.id)?.submitted_at ?? null,
-    answers: (answersById.get(p.id)?.answers as Record<string, unknown>) ?? null,
-    card: cardById.get(p.id) ?? null,
-  }));
+  const rows: ResponseRow[] = participants.map((p) => {
+    const answers = (answersById.get(p.id)?.answers as Record<string, unknown>) ?? null;
+    return {
+      id: p.id,
+      name: p.name,
+      email: p.email,
+      role: p.role,
+      submitted_at: answersById.get(p.id)?.submitted_at ?? null,
+      answers,
+      card: answers ? buildCard(p.role, answers) : null,
+      preferences: Array.isArray(answers?.q32)
+        ? (answers.q32 as string[]).map((id) => nameById.get(id) ?? "(removed)")
+        : [],
+    };
+  });
 
   return (
     <div className="space-y-6">

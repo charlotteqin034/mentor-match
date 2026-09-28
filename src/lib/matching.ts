@@ -30,10 +30,8 @@ export type MatchParticipant = {
   name: string;
   email: string;
   role: "big" | "little";
-  display_number: number | null;
   answers: Answers | null;
   embedding?: number[] | null;
-  ranks: { rankedId: string; rank: number }[];
 };
 
 export type MatrixCell = {
@@ -82,7 +80,6 @@ const toSide = (p: MatchParticipant): Side => ({
   id: p.id,
   answers: p.answers,
   embedding: p.embedding ?? null,
-  ranks: p.ranks,
 });
 
 export function buildScoreMatrix(
@@ -115,7 +112,7 @@ export function runMatching(
   littles: MatchParticipant[],
   weights: Weights = DEFAULT_WEIGHTS,
   blockedPairs: { participant_a: string; participant_b: string }[] = [],
-  /** Pre-built matrix, when a caller has already adjusted it (e.g. shortlists). */
+  /** Pre-built matrix, when a caller has already adjusted the scores. */
   prebuilt?: MatrixCell[][],
 ): MatchResult {
   const blocked = blockedSet(blockedPairs);

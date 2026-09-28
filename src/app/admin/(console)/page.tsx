@@ -1,14 +1,10 @@
 import Link from "next/link";
 import { ConfigError } from "@/components/admin/ConfigError";
-import { GenerateProfilesButton } from "@/components/admin/GenerateProfilesButton";
-import { GenerateShortlistsButton } from "@/components/admin/GenerateShortlistsButton";
 import { RoundBar } from "@/components/admin/RoundBar";
 import { StageControl } from "@/components/admin/StageControl";
 import { getSelectedRound } from "@/lib/admin";
-import { getParticipants, getProfileCards, getRoundShortlists, listRounds } from "@/lib/data";
+import { getParticipants, getTraitResponses, listRounds } from "@/lib/data";
 import { env } from "@/lib/env";
-import { RANK_COUNT } from "@/lib/shortlists";
-import type { Participant } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +16,6 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
       {sub && <p className="text-xs text-muted">{sub}</p>}
     </div>
   );
-}
-
-function completion(list: Participant[], key: "trait_completed_at" | "ranking_completed_at") {
-  const done = list.filter((p) => p[key]).length;
-  return { done, total: list.length };
 }
 
 export default async function OverviewPage() {
@@ -49,12 +40,12 @@ export default async function OverviewPage() {
   const participants = await getParticipants(round.id);
   const bigs = participants.filter((p) => p.role === "big");
   const littles = participants.filter((p) => p.role === "little");
-  const cards = await getProfileCards(participants.map((p) => p.id));
-  const shortlists = await getRoundShortlists(round.id);
-  const withShortlist = new Set(shortlists.map((s) => s.participant_id)).size;
+  const responses = await getTraitResponses(participants.map((p) => p.id));
 
-  const trait = completion(participants, "trait_completed_at");
-  const ranking = completion(participants, "ranking_completed_at");
+  const done = participants.filter((p) => p.trait_completed_at).length;
+  const namedSomeone = responses.filter(
+    (r) => Array.isArray(r.answers?.q32) && (r.answers.q32 as string[]).length > 0,
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -68,62 +59,30 @@ export default async function OverviewPage() {
           sub={`${bigs.length} bigs · ${littles.length} littles`}
         />
         <Stat
-          label="Trait survey"
-          value={`${trait.done}/${trait.total}`}
-          sub={trait.done === trait.total && trait.total > 0 ? "Everyone's in" : "Still waiting"}
+          label="Survey"
+          value={`${done}/${participants.length}`}
+          sub={done === participants.length && participants.length > 0 ? "Everyone's in" : "Still waiting"}
         />
         <Stat
-          label="Ranking survey"
-          value={`${ranking.done}/${ranking.total}`}
-          sub="Optional — matching runs without it"
+          label="Named a preference"
+          value={String(namedSomeone)}
+          sub="Shown alongside the match, not scored"
         />
         <Stat
-          label="Profile cards"
-          value={String(cards.length)}
-          sub={env.embeddingsEnabled ? "Embeddings on" : "Embeddings off"}
+          label="Embeddings"
+          value={env.embeddingsEnabled ? "On" : "Off"}
+          sub="Open-text similarity"
         />
       </div>
 
       {bigs.length !== littles.length && participants.length > 0 && (
         <div className="card border-warn/40 bg-warn-soft p-4 text-sm text-warn">
-          There are {bigs.length} bigs and {littles.length} littles. Matching will still
-          run — {Math.abs(bigs.length - littles.length)}{" "}
-          {bigs.length > littles.length ? "bigs" : "littles"} will be reported as
-          unmatched rather than paired badly.
+          There are {bigs.length} bigs and {littles.length} littles. Matching will still run —{" "}
+          {Math.abs(bigs.length - littles.length)}{" "}
+          {bigs.length > littles.length ? "bigs" : "littles"} will be reported as unmatched
+          rather than paired badly.
         </div>
       )}
-
-      <div className="card p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold">Profile cards</h2>
-            <p className="mt-1 text-xs text-muted">
-              Build the anonymous cards from trait answers. Safe to re-run — existing profile
-              numbers are kept, so links and submitted rankings stay valid.
-            </p>
-          </div>
-          <GenerateProfilesButton roundId={round.id} />
-        </div>
-      </div>
-
-      <div className="card p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="max-w-prose">
-            <h2 className="text-sm font-semibold">Ranking shortlists</h2>
-            <p className="mt-1 text-xs text-muted">
-              Nobody ranks the whole cohort. Each person is offered the handful of profiles
-              that score best against theirs, and puts their top {RANK_COUNT} in order. Build
-              these after the cards, before opening the ranking round.
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              {withShortlist > 0
-                ? `${withShortlist} of ${participants.length} have a shortlist (${shortlists.length} entries).`
-                : "No shortlists yet."}
-            </p>
-          </div>
-          <GenerateShortlistsButton roundId={round.id} />
-        </div>
-      </div>
 
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
@@ -146,9 +105,7 @@ export default async function OverviewPage() {
               <tr>
                 <th className="px-4 py-2 font-medium">Name</th>
                 <th className="px-4 py-2 font-medium">Role</th>
-                <th className="px-4 py-2 font-medium">Profile</th>
-                <th className="px-4 py-2 font-medium">Trait</th>
-                <th className="px-4 py-2 font-medium">Ranking</th>
+                <th className="px-4 py-2 font-medium">Survey</th>
               </tr>
             </thead>
             <tbody>
@@ -156,18 +113,8 @@ export default async function OverviewPage() {
                 <tr key={p.id} className="border-b border-line/60 last:border-0">
                   <td className="px-4 py-2">{p.name}</td>
                   <td className="px-4 py-2 text-muted">{p.role}</td>
-                  <td className="px-4 py-2 tabular-nums text-muted">
-                    {p.display_number ? `#${p.display_number}` : "—"}
-                  </td>
                   <td className="px-4 py-2">
                     {p.trait_completed_at ? (
-                      <span className="text-accent">done</span>
-                    ) : (
-                      <span className="text-faint">waiting</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    {p.ranking_completed_at ? (
                       <span className="text-accent">done</span>
                     ) : (
                       <span className="text-faint">waiting</span>

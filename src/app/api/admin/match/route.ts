@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { getRoundShortlists, loadMatchInput } from "@/lib/data";
+import { getTraitResponses, loadMatchInput } from "@/lib/data";
 import { runMatching } from "@/lib/matching";
-import { restrictMatrixToShortlists, shortlistPairKeys } from "@/lib/shortlists";
 import { normaliseWeights } from "@/lib/scoring";
 import { db } from "@/lib/supabase";
 import { env } from "@/lib/env";
@@ -23,7 +22,6 @@ export async function POST(request: Request) {
     weights?: Record<string, unknown>;
     persist?: boolean;
     embeddings?: boolean;
-    restrict_to_shortlists?: boolean;
   };
   if (!body.round_id) return NextResponse.json({ error: "Missing round." }, { status: 400 });
 
@@ -42,22 +40,15 @@ export async function POST(request: Request) {
 
   const { bigs, littles, blocked, participants } = input;
 
-  // Holding the matcher to the shortlists is opt-in: a shortlist-only
-  // assignment often has no perfect matching (six littles can share the same
-  // five bigs), and the optimiser would then be forced into a pair nobody
-  // shortlisted. Off by default; when on, forced pairs surface in the results
-  // as blocked so the organiser sees exactly where it had no choice.
-  let result = runMatching(bigs, littles, weights, blocked);
-  if (body.restrict_to_shortlists) {
-    const allowed = shortlistPairKeys(await getRoundShortlists(body.round_id));
-    const restricted = restrictMatrixToShortlists(
-      result.matrix,
-      result.big_ids,
-      result.little_ids,
-      allowed,
-    );
-    result = runMatching(bigs, littles, weights, blocked, restricted);
-  }
+  const result = runMatching(bigs, littles, weights, blocked);
+
+  const responses = await getTraitResponses(participants.map((p) => p.id));
+  const preferencesById = new Map(
+    responses.map((r) => [
+      r.participant_id,
+      Array.isArray(r.answers?.q32) ? (r.answers.q32 as string[]) : [],
+    ]),
+  );
 
   let runId: string | null = null;
   if (body.persist) {
@@ -79,16 +70,15 @@ export async function POST(request: Request) {
     run_id: runId,
     weights,
     embeddings_used: useEmbeddings,
-    restricted: Boolean(body.restrict_to_shortlists),
     result,
     people: participants.map((p) => ({
       id: p.id,
       name: p.name,
       email: p.email,
       role: p.role,
-      display_number: p.display_number,
-      trait_completed: Boolean(p.trait_completed_at),
-      ranking_completed: Boolean(p.ranking_completed_at),
+      survey_completed: Boolean(p.trait_completed_at),
+      // Who they said they'd like. Shown next to the match, never scored.
+      prefers: preferencesById.get(p.id) ?? [],
     })),
   });
 }

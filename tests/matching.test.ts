@@ -3,7 +3,7 @@ import { BLOCKED_SCORE, buildScoreMatrix, runMatching } from "@/lib/matching";
 import { swapPairs } from "@/lib/override";
 import type { MatchParticipant } from "@/lib/matching";
 import { DEFAULT_WEIGHTS } from "@/lib/scoring";
-import { addRankings, answersAt, syntheticCohort } from "./fixtures";
+import { answersAt, syntheticCohort } from "./fixtures";
 
 const person = (
   id: string,
@@ -14,10 +14,8 @@ const person = (
   name: id,
   email: `${id}@example.test`,
   role,
-  display_number: null,
   answers,
   embedding: null,
-  ranks: [],
 });
 
 describe("blocked pairs", () => {
@@ -119,8 +117,6 @@ describe("manual override", () => {
 describe("full synthetic pipeline — 25 bigs × 25 littles", () => {
   const bigs = syntheticCohort("big", 25, 1234);
   const littles = syntheticCohort("little", 25, 5678);
-  addRankings(bigs, littles, 42);
-  addRankings(littles, bigs, 99);
   const result = runMatching(bigs, littles, DEFAULT_WEIGHTS, [
     { participant_a: "big-0", participant_b: "little-0" },
   ]);

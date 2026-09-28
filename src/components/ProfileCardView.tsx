@@ -30,12 +30,10 @@ function WantMeter({ questionId, value }: { questionId: string; value: number })
 export function ProfileCardView({
   card,
   selected = false,
-  showRole = false,
   action,
 }: {
   card: ProfileCard;
   selected?: boolean;
-  showRole?: boolean;
   action?: React.ReactNode;
 }) {
   return (
@@ -46,8 +44,7 @@ export function ProfileCardView({
     >
       <header className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold">Profile #{card.display_number}</h3>
-          {showRole && <p className="text-xs text-muted">{card.role}</p>}
+          <h3 className="text-sm font-semibold capitalize">{card.role}</h3>
         </div>
         {action}
       </header>

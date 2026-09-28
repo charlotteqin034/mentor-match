@@ -32,9 +32,6 @@ vi.mock("next/headers", () => ({
 const { POST: roundRoute } = await import("@/app/api/admin/round/route");
 const { POST: participantsRoute } = await import("@/app/api/admin/participants/route");
 const { POST: traitRoute } = await import("@/app/api/trait-response/route");
-const { POST: profilesRoute } = await import("@/app/api/admin/profiles/route");
-const { POST: shortlistsRoute } = await import("@/app/api/admin/shortlists/route");
-const { POST: rankingsRoute } = await import("@/app/api/rankings/route");
 const { POST: blockedRoute } = await import("@/app/api/admin/blocked/route");
 const { POST: matchRoute } = await import("@/app/api/admin/match/route");
 const { POST: runsRoute } = await import("@/app/api/admin/runs/route");
@@ -223,165 +220,11 @@ describe("participants", () => {
   });
 });
 
-describe("profile cards", () => {
-  it("builds anonymous cards and keeps numbers stable across regeneration", async () => {
-    const roundId = await seedRound();
-    await setStage(roundId, "trait_survey");
-    await submitAllTraits();
-
-    const first = await json(await profilesRoute(req("/api/admin/profiles", { round_id: roundId })));
-    expect(first.generated).toBe(12);
-
-    const numbers = people().map((p) => p.display_number);
-    expect(new Set(numbers).size).toBe(12);
-    expect(numbers.every((n) => typeof n === "number")).toBe(true);
-
-    const cards = store.tables.profile_cards;
-    const serialised = JSON.stringify(cards);
-    for (const p of people()) {
-      expect(serialised).not.toContain(p.token);
-      expect(serialised).not.toContain(p.name);
-    }
-    expect(serialised).not.toContain("@example.com");
-
-    await profilesRoute(req("/api/admin/profiles", { round_id: roundId }));
-    expect(people().map((p) => p.display_number)).toEqual(numbers);
-  });
-
-  it("skips people with no trait response and names them", async () => {
-    const roundId = await seedRound();
-    await setStage(roundId, "trait_survey");
-    await traitRoute(
-      req("/api/trait-response", { token: people()[0].token, answers: answersAt(4) }),
-    );
-    const body = await json(await profilesRoute(req("/api/admin/profiles", { round_id: roundId })));
-    expect(body.generated).toBe(1);
-    expect((body.missing as string[]).length).toBe(11);
-  });
-});
-
-/** The candidates a given person was offered, in the order the matcher rated them. */
-const offeredTo = (participantId: string) =>
-  (store.tables.shortlists as unknown as { participant_id: string; candidate_id: string; position: number }[])
-    .filter((s) => s.participant_id === participantId)
-    .sort((a, b) => a.position - b.position)
-    .map((s) => s.candidate_id);
-
-describe("rankings", () => {
-  async function readyToRank() {
-    const roundId = await seedRound();
-    await setStage(roundId, "trait_survey");
-    await submitAllTraits();
-    await profilesRoute(req("/api/admin/profiles", { round_id: roundId }));
-    await shortlistsRoute(req("/api/admin/shortlists", { round_id: roundId }));
-    await setStage(roundId, "ranking_survey");
-    return roundId;
-  }
-
-  it("offers everyone a shortlist drawn from the other side", async () => {
-    await readyToRank();
-    for (const p of people()) {
-      const offered = offeredTo(p.id);
-      expect(offered.length).toBeGreaterThan(0);
-      expect(offered.length).toBeLessThanOrEqual(5);
-      for (const id of offered) {
-        expect(people().find((x) => x.id === id)!.role).not.toBe(p.role);
-      }
-    }
-  });
-
-  it("stores an ordered top three and marks the ranker done", async () => {
-    await readyToRank();
-    const big = people().find((p) => p.role === "big")!;
-    const res = await rankingsRoute(
-      req("/api/rankings", { token: big.token, ranked: offeredTo(big.id).slice(0, 3) }),
-    );
-    expect(res.status).toBe(200);
-
-    const stored = store.tables.rankings.filter((r) => r.ranker_id === big.id);
-    expect(stored.map((r) => r.rank).sort()).toEqual([1, 2, 3]);
-    expect(people().find((p) => p.id === big.id)!.ranking_completed_at).toBeTruthy();
-  });
-
-  it("replaces a previous submission rather than appending to it", async () => {
-    await readyToRank();
-    const big = people().find((p) => p.role === "big")!;
-    const offered = offeredTo(big.id);
-    await rankingsRoute(req("/api/rankings", { token: big.token, ranked: offered.slice(0, 3) }));
-    await rankingsRoute(req("/api/rankings", { token: big.token, ranked: offered.slice(1, 4) }));
-    expect(store.tables.rankings.filter((r) => r.ranker_id === big.id)).toHaveLength(3);
-  });
-
-  it("rejects the wrong number of picks, duplicates, and anyone off the shortlist", async () => {
-    await readyToRank();
-    const big = people().find((p) => p.role === "big")!;
-    const offered = offeredTo(big.id);
-    const notOffered = people().find(
-      (p) => p.role === "little" && !offered.includes(p.id),
-    )!;
-
-    const status = async (ranked: string[]) =>
-      (await rankingsRoute(req("/api/rankings", { token: big.token, ranked }))).status;
-
-    expect(await status(offered.slice(0, 2))).toBe(422); // too few
-    expect(await status(offered.slice(0, 4))).toBe(422); // too many
-    expect(await status([offered[0], offered[0], offered[1]])).toBe(422); // duplicate
-    expect(await status([offered[0], offered[1], notOffered.id])).toBe(422); // not offered
-    expect(store.tables.rankings).toHaveLength(0);
-  });
-
-  it("refuses a ranking before shortlists exist", async () => {
-    const roundId = await seedRound();
-    await setStage(roundId, "trait_survey");
-    await submitAllTraits();
-    await profilesRoute(req("/api/admin/profiles", { round_id: roundId }));
-    await setStage(roundId, "ranking_survey"); // no shortlists generated
-
-    const big = people().find((p) => p.role === "big")!;
-    const littles = people().filter((p) => p.role === "little");
-    const res = await rankingsRoute(
-      req("/api/rankings", { token: big.token, ranked: littles.slice(0, 3).map((p) => p.id) }),
-    );
-    expect(res.status).toBe(409);
-  });
-
-  it("won't quietly regenerate shortlists once someone has ranked", async () => {
-    const roundId = await readyToRank();
-    const big = people().find((p) => p.role === "big")!;
-    await rankingsRoute(req("/api/rankings", { token: big.token, ranked: offeredTo(big.id).slice(0, 3) }));
-
-    const refused = await shortlistsRoute(req("/api/admin/shortlists", { round_id: roundId }));
-    expect(refused.status).toBe(409);
-    expect((await json(refused)).needs_force).toBe(true);
-    expect(store.tables.rankings).toHaveLength(3);
-
-    const forced = await shortlistsRoute(
-      req("/api/admin/shortlists", { round_id: roundId, force: true }),
-    );
-    expect(forced.status).toBe(200);
-    // Forcing clears the rankings that pointed at the old list.
-    expect(store.tables.rankings).toHaveLength(0);
-    expect(people().find((p) => p.id === big.id)!.ranking_completed_at).toBeNull();
-  });
-});
-
 describe("matching, override and publishing", () => {
   async function readyToMatch() {
     const roundId = await seedRound();
     await setStage(roundId, "trait_survey");
     await submitAllTraits();
-    await profilesRoute(req("/api/admin/profiles", { round_id: roundId }));
-    await shortlistsRoute(req("/api/admin/shortlists", { round_id: roundId }));
-    await setStage(roundId, "ranking_survey");
-
-    const bigs = people().filter((p) => p.role === "big");
-    // Everyone ranks except the last big — matching must cope with that.
-    for (const p of people()) {
-      if (p.id === bigs.at(-1)!.id) continue;
-      await rankingsRoute(
-        req("/api/rankings", { token: p.token, ranked: offeredTo(p.id).slice(0, 3) }),
-      );
-    }
     await setStage(roundId, "matching");
     return roundId;
   }
@@ -485,8 +328,77 @@ describe("matching, override and publishing", () => {
   });
 });
 
+describe("naming a preference", () => {
+  it("stores the ids someone named", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "trait_survey");
+    const big = people().find((p) => p.role === "big")!;
+    const wanted = people().filter((p) => p.role === "little").slice(0, 2);
+
+    const res = await traitRoute(
+      req("/api/trait-response", {
+        token: big.token,
+        answers: answersAt(3, { q32: wanted.map((p) => p.id) }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(store.tables.trait_responses[0].answers).toMatchObject({
+      q32: wanted.map((p) => p.id),
+    });
+  });
+
+  it("is optional — naming nobody is fine", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "trait_survey");
+    const noPreference = answersAt(3);
+    delete noPreference.q32;
+    const res = await traitRoute(
+      req("/api/trait-response", { token: people()[0].token, answers: noPreference }),
+    );
+    expect(res.status).toBe(200);
+    expect((store.tables.trait_responses[0].answers as Record<string, unknown>).q32).toEqual([]);
+  });
+
+  it("refuses someone from the ranker's own side, or a stranger", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "trait_survey");
+    const big = people().find((p) => p.role === "big")!;
+    const anotherBig = people().filter((p) => p.role === "big")[1];
+
+    const ownSide = await traitRoute(
+      req("/api/trait-response", {
+        token: big.token,
+        answers: answersAt(3, { q32: [anotherBig.id] }),
+      }),
+    );
+    expect(ownSide.status).toBe(422);
+
+    const stranger = await traitRoute(
+      req("/api/trait-response", {
+        token: big.token,
+        answers: answersAt(3, { q32: ["not-a-real-id"] }),
+      }),
+    );
+    expect(stranger.status).toBe(422);
+  });
+
+  it("caps how many people one person can name", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "trait_survey");
+    const big = people().find((p) => p.role === "big")!;
+    const everyone = people().filter((p) => p.role === "little");
+    const res = await traitRoute(
+      req("/api/trait-response", {
+        token: big.token,
+        answers: answersAt(3, { q32: everyone.map((p) => p.id) }),
+      }),
+    );
+    expect(res.status).toBe(422);
+  });
+});
+
 describe("CSV export", () => {
-  it("exports links with both survey URLs", async () => {
+  it("exports one survey link per person", async () => {
     const roundId = await seedRound();
     const res = await exportRoute(
       new Request(`http://localhost/api/admin/export?kind=links&round=${roundId}`),
@@ -495,7 +407,7 @@ describe("CSV export", () => {
     expect(res.headers.get("Content-Type")).toContain("text/csv");
     expect(text.split("\r\n")).toHaveLength(13); // header + 12 people
     expect(text).toContain(`http://localhost/s/${people()[0].token}`);
-    expect(text).toContain(`http://localhost/r/${people()[0].token}`);
+    expect(text).not.toContain("/r/"); // the ranking round is gone
   });
 
   it("exports the published pairings with names, emails and scores", async () => {
@@ -530,7 +442,6 @@ describe("CSV export", () => {
 describe("picking your name from the shared link", () => {
   it("routes each stage to the right survey", () => {
     expect(destinationForStage("trait_survey")).toBe("/s");
-    expect(destinationForStage("ranking_survey")).toBe("/r");
     expect(destinationForStage("setup")).toBe("/");
     expect(destinationForStage("matching")).toBe("/");
     expect(destinationForStage("published")).toBe("/");
@@ -547,11 +458,11 @@ describe("picking your name from the shared link", () => {
     expect(await getParticipantToken()).toBe(me.token);
   });
 
-  it("hands out the ranking survey once the round moves on", async () => {
+  it("sends people back to the start once the survey closes", async () => {
     const roundId = await seedRound();
-    await setStage(roundId, "ranking_survey");
+    await setStage(roundId, "matching");
     const body = await json(await joinRoute(req("/api/join", { participant_id: people()[0].id })));
-    expect(body.next).toBe("/r");
+    expect(body.next).toBe("/");
   });
 
   it("lets someone hand the device over", async () => {
