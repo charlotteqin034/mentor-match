@@ -66,6 +66,31 @@ export function ParticipantsManager({
 
   return (
     <div className="space-y-6">
+      <div className="card border-accent/40 bg-accent-soft p-4">
+        <h2 className="text-sm font-semibold">The link to send everyone</h2>
+        <p className="mt-1 text-xs text-muted">
+          One link for the whole club. People pick their name from a list and go straight into
+          whichever survey is open — no individual links to chase.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <code className="flex-1 rounded-md border border-line bg-card px-3 py-2 font-mono text-sm">
+            {origin || "…"}
+          </code>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => copy(origin, "shared")}
+          >
+            {copied === "shared" ? "Copied" : "Copy link"}
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          Anyone with this link can see the list of names and pick any of them, so treat it as
+          club-internal. The per-person links below still work if you&apos;d rather send someone
+          a direct one.
+        </p>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <form
           className="card space-y-3 p-4"

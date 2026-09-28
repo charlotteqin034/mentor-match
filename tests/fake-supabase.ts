@@ -49,6 +49,18 @@ const DEFAULTS: Record<string, () => Row> = {
 export class FakeSupabase {
   tables: Record<string, Row[]> = {};
   private counter = 0;
+  private clock = Date.now();
+
+  /**
+   * Postgres `now()` has microsecond resolution, so two rows inserted back to
+   * back get distinct, increasing timestamps. Date.now() doesn't — without this
+   * everything created in the same millisecond ties, and `order by created_at`
+   * becomes arbitrary in a way the real database never is.
+   */
+  private nextTimestamp(): string {
+    this.clock += 1;
+    return new Date(this.clock).toISOString();
+  }
 
   constructor() {
     for (const t of TABLES) this.tables[t] = [];
@@ -72,7 +84,7 @@ export class FakeSupabase {
       const full: Row = {
         ...DEFAULTS[table]?.(),
         [pk]: row[pk] ?? this.id(),
-        created_at: new Date().toISOString(),
+        created_at: this.nextTimestamp(),
         ...row,
       };
       if (table === "participants") {

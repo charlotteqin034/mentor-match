@@ -53,6 +53,11 @@ export async function getParticipantByToken(
   return { participant, round };
 }
 
+export async function getParticipantById(id: string): Promise<Participant | null> {
+  const { data } = await db().from("participants").select("*").eq("id", id).maybeSingle();
+  return (data as Participant) ?? null;
+}
+
 export async function getTraitResponses(participantIds: string[]): Promise<TraitResponse[]> {
   if (participantIds.length === 0) return [];
   const { data, error } = await db()

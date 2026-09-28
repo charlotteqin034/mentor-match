@@ -39,6 +39,8 @@ const { POST: matchRoute } = await import("@/app/api/admin/match/route");
 const { POST: runsRoute } = await import("@/app/api/admin/runs/route");
 const { POST: publishRoute } = await import("@/app/api/admin/publish/route");
 const { GET: exportRoute } = await import("@/app/api/admin/export/route");
+const { POST: joinRoute, destinationForStage } = await import("@/app/api/join/route");
+const { getParticipantToken } = await import("@/lib/participant-session");
 
 const req = (url: string, body: unknown) =>
   new Request(`http://localhost${url}`, {
@@ -480,5 +482,77 @@ describe("CSV export", () => {
       new Request(`http://localhost/api/admin/export?kind=pairings&round=${roundId}`),
     );
     expect(res.status).toBe(404);
+  });
+});
+
+describe("picking your name from the shared link", () => {
+  it("routes each stage to the right survey", () => {
+    expect(destinationForStage("trait_survey")).toBe("/s");
+    expect(destinationForStage("ranking_survey")).toBe("/r");
+    expect(destinationForStage("setup")).toBe("/");
+    expect(destinationForStage("matching")).toBe("/");
+    expect(destinationForStage("published")).toBe("/");
+  });
+
+  it("remembers who you said you were and sends you to the open survey", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "trait_survey");
+    const me = people()[0];
+
+    const res = await joinRoute(req("/api/join", { participant_id: me.id }));
+    expect(res.status).toBe(200);
+    expect((await json(res)).next).toBe("/s");
+    expect(await getParticipantToken()).toBe(me.token);
+  });
+
+  it("hands out the ranking survey once the round moves on", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "ranking_survey");
+    const body = await json(await joinRoute(req("/api/join", { participant_id: people()[0].id })));
+    expect(body.next).toBe("/r");
+  });
+
+  it("lets someone hand the device over", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "trait_survey");
+    await joinRoute(req("/api/join", { participant_id: people()[0].id }));
+    expect(await getParticipantToken()).toBeTruthy();
+
+    await joinRoute(req("/api/join", { action: "leave" }));
+    expect(await getParticipantToken()).toBeNull();
+  });
+
+  it("refuses a name that isn't in this round", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "trait_survey");
+
+    expect((await joinRoute(req("/api/join", { participant_id: "nobody" }))).status).toBe(404);
+    expect((await joinRoute(req("/api/join", {}))).status).toBe(400);
+    expect(await getParticipantToken()).toBeNull();
+  });
+
+  it("refuses someone belonging to a previous round", async () => {
+    const firstRound = await seedRound();
+    await setStage(firstRound, "trait_survey");
+    const oldParticipant = people()[0];
+
+    // A newer round becomes the current one.
+    await roundRoute(req("/api/admin/round", { action: "create", name: "Spring 2027" }));
+
+    const res = await joinRoute(req("/api/join", { participant_id: oldParticipant.id }));
+    expect(res.status).toBe(404);
+    expect(await getParticipantToken()).toBeNull();
+  });
+
+  it("still accepts the token a direct link carries", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "trait_survey");
+    const me = people()[0];
+    // The submit endpoints are token-based either way, so a direct /s/<token>
+    // link and a name pick end up in exactly the same place.
+    const res = await traitRoute(
+      req("/api/trait-response", { token: me.token, answers: answersAt(4) }),
+    );
+    expect(res.status).toBe(200);
   });
 });
