@@ -19,7 +19,7 @@ export function answersAt(scaleValue: number, overrides: Answers = {}): Answers 
   answers.q26 = ["career_clarity", "network"];
   answers.q27 = "I'm building a small synth out of parts from a broken keyboard.";
   answers.q28 = "Someone I can ask half-formed questions without feeling silly.";
-  answers.q33 = "casa_la";
+  answers.q33 = ["casa_la", "united_colors_of_cancer", "food_access_la"];
   return { ...answers, ...overrides };
 }
 
@@ -51,7 +51,8 @@ export function syntheticCohort(
     answers.q26 = [...values];
     answers.q27 = `Synthetic ${role} ${i} is excited about something.`;
     answers.q28 = `Synthetic ${role} ${i} wants a supportive relationship.`;
-    answers.q33 = ["casa_la", "united_colors_of_cancer", "food_access_la"][i % 3];
+    const projects = ["casa_la", "united_colors_of_cancer", "food_access_la"];
+    answers.q33 = [...projects.slice(i % 3), ...projects.slice(0, i % 3)];
 
     return {
       id: `${role}-${i}`,

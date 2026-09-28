@@ -8,6 +8,7 @@ import {
   expectedPartnerAnswer,
   jaccard,
   openTextSimilarity,
+  projectFit,
   scorePair,
   traitSimilarity,
   valuesOverlap,
@@ -24,7 +25,7 @@ import {
   SECTIONS,
   questionsFor,
   questionsInSection,
-  type ChoiceQuestion,
+  type RankedChoiceQuestion,
   type MultiQuestion,
   type ScaleQuestion,
 } from "@/lib/questions";
@@ -74,9 +75,10 @@ describe("the question bank", () => {
     expect(similarity).toHaveLength(21);
   });
 
-  it("ends on the project question, with all three options", () => {
-    const q33 = QUESTIONS_BY_ID.q33 as ChoiceQuestion;
+  it("ends on the project question, ranked, with all three options", () => {
+    const q33 = QUESTIONS_BY_ID.q33 as RankedChoiceQuestion;
     expect(q33.section).toBe("project");
+    expect(q33.kind).toBe("ranked_choice");
     expect(q33.options.map((o) => o.label)).toEqual([
       "CASA of LA",
       "United Colors of Cancer",
@@ -264,6 +266,71 @@ describe("§8d values overlap", () => {
   });
 });
 
+describe("project fit", () => {
+  const CASA = "casa_la";
+  const CANCER = "united_colors_of_cancer";
+  const FOOD = "food_access_la";
+  const ranking = (...order: string[]) => answersAt(3, { q33: order });
+
+  it("scores an identical ranking at 1", () => {
+    expect(projectFit(ranking(CASA, CANCER, FOOD), ranking(CASA, CANCER, FOOD))).toBe(1);
+  });
+
+  it("scores exact opposites at 0 — whatever they take, one of them is last", () => {
+    expect(projectFit(ranking(CASA, CANCER, FOOD), ranking(FOOD, CANCER, CASA))).toBe(0);
+  });
+
+  it("only needs the top choice to agree, not the rest", () => {
+    expect(projectFit(ranking(CASA, CANCER, FOOD), ranking(CASA, FOOD, CANCER))).toBe(1);
+  });
+
+  it("gives real credit for a shared second choice", () => {
+    // Different first choices, but each is the other's second: cost 1 of 2.
+    const score = projectFit(ranking(CASA, CANCER, FOOD), ranking(CANCER, CASA, FOOD));
+    expect(score).toBeCloseTo(0.5, 10);
+    // Better than opposites, worse than agreeing outright.
+    expect(score).toBeGreaterThan(0);
+    expect(score).toBeLessThan(1);
+  });
+
+  it("beats scoring the top choice alone, which would write this pair off", () => {
+    const a = ranking(CASA, CANCER, FOOD);
+    const b = ranking(CANCER, CASA, FOOD);
+    // Their first choices differ, so top-choice-only scoring sees a total miss...
+    expect((a.q33 as string[])[0]).not.toBe((b.q33 as string[])[0]);
+    // ...but each is the other's second, which is a perfectly workable pairing.
+    expect(projectFit(a, b)).toBeCloseTo(0.5, 10);
+  });
+
+  it("ranks the three cases in the order you'd expect", () => {
+    const base = ranking(CASA, CANCER, FOOD);
+    const same = projectFit(base, ranking(CASA, FOOD, CANCER))!;
+    const swapped = projectFit(base, ranking(CANCER, CASA, FOOD))!;
+    const opposed = projectFit(base, ranking(FOOD, CANCER, CASA))!;
+    expect(same).toBeGreaterThan(swapped);
+    expect(swapped).toBeGreaterThan(opposed);
+  });
+
+  it("returns null when either side hasn't ranked", () => {
+    const blank = answersAt(3);
+    delete blank.q33;
+    expect(projectFit(blank, ranking(CASA, CANCER, FOOD))).toBeNull();
+    expect(projectFit(null, ranking(CASA, CANCER, FOOD))).toBeNull();
+  });
+
+  it("carries real weight — a project clash visibly moves the total", () => {
+    const agree = scorePair(
+      { id: "a", answers: ranking(CASA, CANCER, FOOD) },
+      { id: "b", answers: ranking(CASA, CANCER, FOOD) },
+    );
+    const clash = scorePair(
+      { id: "a", answers: ranking(CASA, CANCER, FOOD) },
+      { id: "b", answers: ranking(FOOD, CANCER, CASA) },
+    );
+    expect(agree.total - clash.total).toBeGreaterThan(0.2);
+  });
+});
+
 describe("§8e open text", () => {
   it("returns null when either embedding is missing", () => {
     expect(openTextSimilarity(null, [1, 0])).toBeNull();
@@ -286,6 +353,7 @@ describe("§8g combining and renormalisation", () => {
         closeness: 1,
         values: 1,
         openText: null,
+        project: 1,
       },
       DEFAULT_WEIGHTS,
     );
@@ -297,11 +365,11 @@ describe("§8g combining and renormalisation", () => {
 
   it("does not let a disabled component drag scores down", () => {
     const withText = combine(
-      { traits: 1, crossPref: 1, closeness: 1, values: 1, openText: 1 },
+      { traits: 1, crossPref: 1, closeness: 1, values: 1, openText: 1, project: 1 },
       DEFAULT_WEIGHTS,
     );
     const withoutText = combine(
-      { traits: 1, crossPref: 1, closeness: 1, values: 1, openText: null },
+      { traits: 1, crossPref: 1, closeness: 1, values: 1, openText: null, project: 1 },
       DEFAULT_WEIGHTS,
     );
     expect(withoutText.total).toBeCloseTo(withText.total, 10);

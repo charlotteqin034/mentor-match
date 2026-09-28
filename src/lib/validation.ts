@@ -39,10 +39,14 @@ function checkOne(
       if (valid.length > q.max) return { error: `Pick at most ${q.max}.` };
       return { value: valid.map((v) => (v.startsWith(OTHER_PREFIX) ? v.trim() : v)) };
     }
-    case "choice": {
-      const picked = typeof raw === "string" ? raw : "";
-      if (!q.options.some((o) => o.id === picked)) return { error: "Pick one." };
-      return { value: picked };
+    case "ranked_choice": {
+      const order = Array.isArray(raw) ? raw.filter((x): x is string => typeof x === "string") : [];
+      const valid = q.options.map((o) => o.id);
+      const unique = [...new Set(order)];
+      if (unique.length !== valid.length || !unique.every((id) => valid.includes(id))) {
+        return { error: "Put all of them in order." };
+      }
+      return { value: unique };
     }
     case "people": {
       // Optional: naming nobody is a normal answer, so an empty list is valid.

@@ -11,6 +11,7 @@ import {
 } from "@/lib/questions";
 import { OTHER_PREFIX, missingQuestionIds } from "@/lib/validation";
 import { PeoplePicker, type Candidate } from "./PeoplePicker";
+import { ProjectRanker } from "./ProjectRanker";
 import { ScaleRow } from "./ScaleRow";
 
 type Answers = Record<string, unknown>;
@@ -332,37 +333,13 @@ function QuestionInput({
       );
     }
 
-    case "choice":
+    case "ranked_choice":
       return (
-        <div className="space-y-2">
-          {question.options.map((option) => {
-            const on = value === option.id;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => onChange(option.id)}
-                className={`block w-full rounded-md border px-4 py-3 text-left transition ${
-                  on
-                    ? "border-accent bg-accent-soft ring-1 ring-accent"
-                    : "border-line bg-card hover:border-accent/50"
-                }`}
-              >
-                <span className="flex items-baseline justify-between gap-3">
-                  <span className="text-sm font-semibold">{option.label}</span>
-                  <span className="text-xs text-muted">{option.meta}</span>
-                </span>
-                <span className="mt-1.5 block text-xs leading-snug text-muted">
-                  <span className="font-medium text-ink">Mission.</span> {option.mission}
-                </span>
-                <span className="mt-1 block text-xs leading-snug text-muted">
-                  <span className="font-medium text-ink">What you&apos;d build.</span>{" "}
-                  {option.product}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <ProjectRanker
+          question={question}
+          value={Array.isArray(value) ? (value as string[]) : []}
+          onChange={onChange}
+        />
       );
 
     case "people":

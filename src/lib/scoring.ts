@@ -24,7 +24,8 @@ export type WeightKey =
   | "crossPref"
   | "closeness"
   | "values"
-  | "openText";
+  | "openText"
+  | "project";
 
 export type Weights = Record<WeightKey, number>;
 
@@ -34,6 +35,7 @@ export const WEIGHT_KEYS: WeightKey[] = [
   "closeness",
   "values",
   "openText",
+  "project",
 ];
 
 export const WEIGHT_LABELS: Record<WeightKey, string> = {
@@ -42,14 +44,16 @@ export const WEIGHT_LABELS: Record<WeightKey, string> = {
   closeness: "Closeness & logistics",
   values: "Values overlap",
   openText: "Open text",
+  project: "Project fit",
 };
 
 export const DEFAULT_WEIGHTS: Weights = {
-  traits: 0.42, // §8a
-  crossPref: 0.08, // §8b
-  closeness: 0.25, // §8c
+  traits: 0.35, // §8a
+  crossPref: 0.07, // §8b
+  closeness: 0.23, // §8c
   values: 0.05, // §8d
   openText: 0.05, // §8e — excluded and renormalised when embeddings are off
+  project: 0.25, // the project they'd actually work on together
 };
 
 export type Components = Record<WeightKey, number | null>;
@@ -231,6 +235,50 @@ export function openTextSimilarity(
 }
 
 // ---------------------------------------------------------------------------
+// Project fit
+// ---------------------------------------------------------------------------
+
+/** Someone's ranking as project id → position, 1 = first choice. */
+function rankMap(answers: Answers | null, id = "q33"): Map<string, number> | null {
+  if (!answers) return null;
+  const order = answers[id];
+  if (!Array.isArray(order) || order.length === 0) return null;
+  const out = new Map<string, number>();
+  order.forEach((projectId, index) => {
+    if (typeof projectId === "string" && !out.has(projectId)) out.set(projectId, index + 1);
+  });
+  return out.size > 0 ? out : null;
+}
+
+/**
+ * How good the best project these two could share actually is.
+ *
+ * For every project, add up how far down each person's list it sits; the
+ * cheapest one is the project they'd both be happiest working on. Two people
+ * who both put Food Access first score 1; two people whose lists are exact
+ * opposites score 0, because whatever they end up on, one of them is at the
+ * bottom of their list.
+ *
+ * Scoring only the top choice would throw away most of the answer — sharing a
+ * second choice is worth a great deal more than sharing nothing.
+ */
+export function projectFit(a: Answers | null, b: Answers | null): number | null {
+  const ra = rankMap(a);
+  const rb = rankMap(b);
+  if (!ra || !rb) return null;
+
+  const shared = [...ra.keys()].filter((id) => rb.has(id));
+  if (shared.length === 0) return null;
+
+  const cost = Math.min(...shared.map((id) => ra.get(id)! - 1 + (rb.get(id)! - 1)));
+  // With n projects the cheapest shared option can never cost more than n − 1,
+  // so that's the divisor that puts the worst case at exactly 0.
+  const worst = shared.length - 1;
+  if (worst <= 0) return 1;
+  return Math.max(0, 1 - cost / worst);
+}
+
+// ---------------------------------------------------------------------------
 // §8g — final score
 // ---------------------------------------------------------------------------
 
@@ -265,6 +313,7 @@ export function scorePair(a: Side, b: Side, weights: Weights = DEFAULT_WEIGHTS):
     closeness: closenessGap(a.answers, b.answers),
     values: valuesOverlap(a.answers, b.answers),
     openText: openTextSimilarity(a.embedding, b.embedding),
+    project: projectFit(a.answers, b.answers),
   };
   const { total, applied } = combine(components, weights);
   return { total, components, applied };

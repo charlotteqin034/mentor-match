@@ -8,6 +8,7 @@ export const COMPONENT_COLORS: Record<WeightKey, string> = {
   closeness: "#c2703d",
   values: "#7d6ba8",
   openText: "#4a7fa8",
+  project: "#b8722f",
 };
 
 /**

@@ -11,7 +11,7 @@ import {
   QUESTIONS_BY_ID,
   SCALE_MIDPOINT,
   SCALE_QUESTIONS,
-  type ChoiceQuestion,
+  type RankedChoiceQuestion,
   type MultiQuestion,
 } from "./questions";
 import { OTHER_PREFIX } from "./validation";
@@ -24,7 +24,7 @@ export type ProfileCard = {
   values: string[];
   excited_about: string;
   ideal_relationship: string;
-  project: string;
+  projects: string[];
   standout_traits: StandoutTrait[];
   wants: { closeness: number; communication: number; cadence: number };
 };
@@ -38,8 +38,15 @@ export function valueLabel(token: string): string {
 }
 
 export function projectLabel(id: string): string {
-  const q = QUESTIONS_BY_ID.q33 as ChoiceQuestion;
+  const q = QUESTIONS_BY_ID.q33 as RankedChoiceQuestion;
   return q.options.find((o) => o.id === id)?.label ?? "";
+}
+
+/** Someone's project ranking as labels, best first. */
+export function projectOrder(answers: Answers | null | undefined): string[] {
+  const order = answers?.q33;
+  if (!Array.isArray(order)) return [];
+  return order.filter((x): x is string => typeof x === "string").map(projectLabel);
 }
 
 const num = (answers: Answers, id: string, fallback = SCALE_MIDPOINT): number => {
@@ -87,7 +94,7 @@ export function buildCard(role: "big" | "little", answers: Answers): ProfileCard
     values: values.map(valueLabel),
     excited_about: str(answers, "q27"),
     ideal_relationship: str(answers, "q28"),
-    project: projectLabel(str(answers, "q33")),
+    projects: projectOrder(answers),
     standout_traits: standoutTraits(answers),
     wants: {
       closeness: num(answers, "q23"),

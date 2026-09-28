@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { AnswerList } from "./AnswerList";
 import { ProfileCardView } from "@/components/ProfileCardView";
-import { QUESTIONS_BY_ID, type ChoiceQuestion } from "@/lib/questions";
+import { QUESTIONS_BY_ID, type RankedChoiceQuestion } from "@/lib/questions";
 import { projectLabel } from "@/lib/profile-cards";
 import type { ProfileCard } from "@/lib/profile-cards";
 
@@ -18,7 +18,10 @@ export type ResponseRow = {
   preferences: string[];
 };
 
-const PROJECTS = (QUESTIONS_BY_ID.q33 as ChoiceQuestion).options;
+const PROJECTS = (QUESTIONS_BY_ID.q33 as RankedChoiceQuestion).options;
+
+const firstChoice = (answers: Record<string, unknown> | null) =>
+  Array.isArray(answers?.q33) ? ((answers.q33 as string[])[0] ?? "") : "";
 
 export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
   const [open, setOpen] = useState<string | null>(null);
@@ -30,7 +33,7 @@ export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
       if (role !== "all" && r.role !== role) return false;
-      if (project !== "all" && r.answers?.q33 !== project) return false;
+      if (project !== "all" && firstChoice(r.answers) !== project) return false;
       if (!q) return true;
       return r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q);
     });
@@ -59,7 +62,7 @@ export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
           value={project}
           onChange={(e) => setProject(e.target.value)}
         >
-          <option value="all">Any project</option>
+          <option value="all">Any first choice</option>
           {PROJECTS.map((p) => (
             <option key={p.id} value={p.id}>
               {p.label}
@@ -86,9 +89,7 @@ export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
                 <span className="flex-1 font-medium">{row.name}</span>
                 <span className="w-16 text-xs text-muted">{row.role}</span>
                 <span className="w-36 truncate text-xs text-muted">
-                  {projectLabel(
-                    typeof row.answers?.q33 === "string" ? row.answers.q33 : "",
-                  )}
+                  {projectLabel(firstChoice(row.answers))}
                 </span>
                 <span className="w-40 truncate text-right text-xs text-faint">
                   {row.preferences.length > 0 ? `asked for ${row.preferences.join(", ")}` : ""}

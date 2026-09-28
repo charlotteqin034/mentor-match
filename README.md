@@ -36,16 +36,27 @@ No paid services anywhere.
 
 ## The project question
 
-The survey ends with a section of its own asking which project someone wants to
-work on. The three options, with their PM, TL, mission and product, live in the
-`q33` entry in `src/lib/questions.ts` — editing them each semester is one edit
-in one place.
+The survey ends with a section of its own where people rank all three projects.
+The options — PM, TL, mission and product — live in the `q33` entry in
+`src/lib/questions.ts`; editing them each semester is one edit in one place.
 
-Like preferences, the answer is **shown, not scored**: the Matching page puts
-each person's project next to their name and warns when an assigned pair chose
-different ones, but the optimiser pairs across projects freely. Making it a
-scored component, or a hard constraint, is a deliberate decision rather than a
-default.
+**Project fit is the second-heaviest component**, at 0.25 against trait
+similarity's 0.35. A pair who both put the same project first score 1; a pair
+whose rankings are exact opposites score 0, because whichever project they end
+up on, one of them is at the bottom of their list.
+
+Scoring the whole ranking rather than just the first choice matters more than it
+sounds. Two people whose first choices differ but who are each other's second
+score 0.5 rather than 0 — a perfectly workable pairing that top-choice-only
+scoring would write off entirely.
+
+The ranker starts **empty** rather than pre-ordered. A pre-filled list is one
+people leave alone, and "didn't think about it" would be recorded as a genuine
+first choice.
+
+On the Matching page each assigned pair shows the best project they share and
+where it sits on both lists (`Food Access LA #1/#2`), so a pair scoring badly on
+project is obvious at a glance.
 
 ## Preferences
 
@@ -162,7 +173,7 @@ Every component returns a value in `[0, 1]` *before* weighting, so the weights
 are directly comparable. Default weights:
 
 ```ts
-{ traits: 0.42, crossPref: 0.08, closeness: 0.25, values: 0.05, openText: 0.05 }
+{ traits: 0.35, crossPref: 0.07, closeness: 0.23, values: 0.05, openText: 0.05, project: 0.25 }
 ```
 
 | Component | Questions | How |
@@ -172,6 +183,7 @@ are directly comparable. Default weights:
 | **Closeness & logistics** | q23, q24, q25 | Same gap formula, own component, q23 weighted double — a light-touch big with a close-bigship little is the most damaging mismatch there is |
 | **Values overlap** | q26 | Jaccard index over the selected sets. Only littles are asked q26, so a pair never has both sides — this component is always excluded and its weight redistributes. It exists for the profile card |
 | **Open text** | q27 + q28 | Cosine similarity of embeddings. Excluded entirely when disabled |
+| **Project fit** | q33 | For each project, how far down both lists it sits; the cheapest shared one wins. 1 = they'd both be happiest on the same project, 0 = exact opposite rankings |
 
 A question can carry `audience: "big" | "little"` to restrict it to one side.
 `q26` does. A one-sided question can't produce a similarity score — there's

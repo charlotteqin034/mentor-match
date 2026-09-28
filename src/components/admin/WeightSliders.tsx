@@ -4,18 +4,21 @@ import {
   DEFAULT_WEIGHTS,
   WEIGHT_KEYS,
   WEIGHT_LABELS,
+  type WeightKey,
   type Weights,
 } from "@/lib/scoring";
 import { COMPONENT_COLORS } from "./ComponentBar";
 
-const NOTES: Record<string, string> = {
-  traits: "How alike the two of you are across the 22 personality scales.",
+/** Typed against WeightKey so adding a component without a note won't compile. */
+const NOTES: Record<WeightKey, string> = {
+  traits: "How alike the two of you are across the personality scales.",
   crossPref: "What you said you want in a partner (q10) vs how they actually are (q15).",
   closeness: "Agreement on closeness, medium and cadence. The costliest thing to get wrong.",
   values:
     "Overlap in what you're each here for. Only littles answer that question, so there's nothing to compare a pair on — this scores nothing until bigs answer one too.",
   openText: "Similarity of the two free-text answers. Needs embeddings switched on.",
-  ranking: "Whether the two of you picked each other in the ranking round.",
+  project:
+    "How good the best project you'd both be happy on actually is — from the full ranking, not just first choices.",
 };
 
 export function WeightSliders({

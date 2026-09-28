@@ -68,10 +68,10 @@ export function ProfileCardView({
           <dt className="label">Ideal relationship</dt>
           <dd className="mt-0.5 leading-snug">{card.ideal_relationship}</dd>
         </div>
-        {card.project && (
+        {card.projects.length > 0 && (
           <div>
-            <dt className="label">Project</dt>
-            <dd className="mt-0.5 leading-snug">{card.project}</dd>
+            <dt className="label">Projects, in order</dt>
+            <dd className="mt-0.5 leading-snug">{card.projects.join(" › ")}</dd>
           </div>
         )}
         {card.values.length > 0 && (

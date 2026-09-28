@@ -41,9 +41,9 @@ function renderAnswer(question: Question, value: unknown): React.ReactNode {
       ) : (
         <span className="text-faint">—</span>
       );
-    case "choice":
-      return typeof value === "string" && value ? (
-        <span>{projectLabel(value)}</span>
+    case "ranked_choice":
+      return Array.isArray(value) && value.length > 0 ? (
+        <span>{(value as string[]).map(projectLabel).join(" › ")}</span>
       ) : (
         <span className="text-faint">—</span>
       );

@@ -24,7 +24,8 @@ export const SECTIONS: { id: SectionId; title: string; blurb?: string }[] = [
   {
     id: "project",
     title: "The project",
-    blurb: "Last one. Pick the project you'd most want to work on.",
+    blurb:
+      "Last one. You'll be paired with someone whose choices line up with yours, so rank all three honestly.",
   },
 ];
 
@@ -59,6 +60,7 @@ export type ScoringMode =
   | "jaccard"
   | "text"
   | "preference"
+  | "project"
   | "display";
 
 type Base = {
@@ -122,10 +124,13 @@ export type PeopleQuestion = Base & {
   max: number;
 };
 
-/** One pick from a handful of richly described options. Not scored. */
-export type ChoiceQuestion = Base & {
-  kind: "choice";
-  mode: "display";
+/**
+ * All of a handful of richly described options, put in preference order.
+ * Stored as an array of every option id, best first.
+ */
+export type RankedChoiceQuestion = Base & {
+  kind: "ranked_choice";
+  mode: "project";
   options: {
     id: string;
     label: string;
@@ -141,7 +146,7 @@ export type Question =
   | MultiQuestion
   | TextQuestion
   | PeopleQuestion
-  | ChoiceQuestion;
+  | RankedChoiceQuestion;
 
 const scale = (
   id: string,
@@ -350,11 +355,11 @@ export const QUESTIONS: Question[] = [
 
   // ---- Section E: the project ---------------------------------------------
   {
-    kind: "choice",
+    kind: "ranked_choice",
     id: "q33",
     section: "project",
-    text: "What project would you like to be a part of?",
-    mode: "display",
+    text: "Put these in order — your first choice at the top.",
+    mode: "project",
     options: [
       {
         id: "casa_la",

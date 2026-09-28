@@ -24,8 +24,8 @@ type Person = {
   survey_completed: boolean;
   /** Ids this person asked for, in the order they named them. */
   prefers: string[];
-  /** The project they chose, as a q33 option id. */
-  project: string;
+  /** Their project ranking, best first, as q33 option ids. */
+  projects: string[];
 };
 
 type MatchResponse = {
@@ -192,15 +192,25 @@ export function MatchingConsole({
     return out;
   }, [pairs]);
 
-  /** Pairs who picked different projects — worth the organiser's eye. */
-  const projectSplit = useMemo(
-    () =>
-      pairs.filter((p) => {
-        const a = people.get(p.big_id)?.project;
-        const b = people.get(p.little_id)?.project;
-        return a && b && a !== b;
-      }),
-    [pairs, people],
+  /**
+   * The project a pair would both be happiest on, and how far down each of
+   * their lists it sits. This is what the project component actually scores.
+   */
+  const sharedProject = useCallback(
+    (bigId: string, littleId: string) => {
+      const a = people.get(bigId)?.projects ?? [];
+      const b = people.get(littleId)?.projects ?? [];
+      if (a.length === 0 || b.length === 0) return null;
+      let best: { id: string; a: number; b: number; cost: number } | null = null;
+      for (const id of a) {
+        const bi = b.indexOf(id);
+        if (bi === -1) continue;
+        const cost = a.indexOf(id) + bi;
+        if (!best || cost < best.cost) best = { id, a: a.indexOf(id) + 1, b: bi + 1, cost };
+      }
+      return best;
+    },
+    [people],
   );
 
   const totalScore = pairs.reduce((s, p) => s + p.total, 0);
@@ -325,20 +335,6 @@ export function MatchingConsole({
               </div>
             )}
 
-            {projectSplit.length > 0 && (
-              <div className="card border-warn/40 bg-warn-soft p-4 text-sm text-warn">
-                <p className="font-semibold">
-                  {projectSplit.length} pair{projectSplit.length === 1 ? "" : "s"} chose
-                  different projects
-                </p>
-                <p className="mt-1">
-                  Project choice isn&apos;t scored, so the matcher pairs across projects freely.
-                  If a pair needs to be on the same one, swap them by hand — or say the word and
-                  it can become a scored component.
-                </p>
-              </div>
-            )}
-
             {edited && (
               <div className="card border-accent/40 bg-accent-soft p-4 text-sm">
                 <p className="font-medium">You&apos;ve hand-edited this arrangement.</p>
@@ -406,6 +402,7 @@ export function MatchingConsole({
                             <span className="w-14 text-right font-semibold tabular-nums">
                               {pair.total.toFixed(3)}
                             </span>
+                            <SharedProject best={sharedProject(pair.big_id, pair.little_id)} />
                             <PreferenceBadge {...preferenceHit(pair.big_id, pair.little_id)} />
                             <span
                               className="w-24 text-right text-xs tabular-nums text-muted"
@@ -484,10 +481,12 @@ export function MatchingConsole({
                     <div key={person.id} className="grid gap-2 px-4 py-2.5 sm:grid-cols-[12rem_1fr_1fr]">
                       <div>
                         <p className="text-sm font-medium">{person.name}</p>
-                        <p className="text-xs text-faint">
-                          {person.role}
-                          {person.project ? ` · ${projectLabel(person.project)}` : ""}
-                        </p>
+                        <p className="text-xs text-faint">{person.role}</p>
+                        {person.projects.length > 0 && (
+                          <p className="mt-0.5 text-[11px] leading-tight text-faint">
+                            {person.projects.map(projectLabel).join(" › ")}
+                          </p>
+                        )}
                       </div>
 
                       <ol className="space-y-0.5 text-xs">
@@ -565,6 +564,27 @@ function PairName({ person }: { person: Person | undefined }) {
           no survey
         </span>
       )}
+    </span>
+  );
+}
+
+/** The best project a pair shares, and where it sits on each of their lists. */
+function SharedProject({
+  best,
+}: {
+  best: { id: string; a: number; b: number } | null;
+}) {
+  if (!best) return <span className="w-36" />;
+  const perfect = best.a === 1 && best.b === 1;
+  return (
+    <span
+      className={`w-36 truncate text-right text-xs ${perfect ? "text-accent" : "text-muted"}`}
+      title={`Best project they share: their #${best.a} and #${best.b}`}
+    >
+      {projectLabel(best.id)}{" "}
+      <span className="text-faint">
+        #{best.a}/#{best.b}
+      </span>
     </span>
   );
 }
