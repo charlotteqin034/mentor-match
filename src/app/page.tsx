@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { destinationForStage } from "@/app/api/join/route";
 import { NamePicker, type PickerPerson } from "@/components/NamePicker";
+import { QUESTIONS } from "@/lib/questions";
 import { getCurrentRound, getParticipantByToken, getParticipants } from "@/lib/data";
 import { supabaseConfigured } from "@/lib/env";
 import { getParticipantToken } from "@/lib/participant-session";
@@ -78,7 +79,7 @@ export default async function Home() {
       >
         <p className="mb-5 text-sm text-muted">
           {isTrait
-            ? "Thirty quick questions, about ten minutes. Your answers are used to pair you with someone — only the organiser ever sees them."
+            ? `${QUESTIONS.length} quick questions, about ten minutes. Your answers are used to pair you with someone — only the organiser ever sees them.`
             : "You'll see anonymous profiles of the other side and put your favourites in order. No names, deliberately."}
         </p>
         <NamePicker

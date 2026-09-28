@@ -103,7 +103,6 @@ async function submitAllTraits() {
         answers: answersAt(base, {
           q23: 1 + ((i * 3) % 7),
           q26: i % 2 ? ["network", "confidence"] : ["career_clarity", "network"],
-          q29: ["planner", "idea", "doer", "mediator"][i % 4],
         }),
       }),
     );
@@ -149,14 +148,14 @@ describe("stage gating", () => {
     const roundId = await seedRound();
     await setStage(roundId, "trait_survey");
     const partial = answersAt(4);
+    delete partial.q26;
     delete partial.q27;
-    delete partial.q29;
     const res = await traitRoute(
       req("/api/trait-response", { token: people()[0].token, answers: partial }),
     );
     expect(res.status).toBe(422);
     const body = await json(res);
-    expect(Object.keys(body.errors as object).sort()).toEqual(["q27", "q29"]);
+    expect(Object.keys(body.errors as object).sort()).toEqual(["q26", "q27"]);
     expect(store.tables.trait_responses).toHaveLength(0);
   });
 });

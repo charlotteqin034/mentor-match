@@ -12,7 +12,7 @@ const NOTES: Record<string, string> = {
   traits: "How alike the two of you are across the 22 personality scales.",
   crossPref: "What you said you want in a partner (q10) vs how they actually are (q15).",
   closeness: "Agreement on closeness, medium and cadence. The costliest thing to get wrong.",
-  valuesRole: "Overlap in what you're each here for, plus a nudge for complementary roles.",
+  values: "How much the two of you want the same things out of this.",
   openText: "Similarity of the two free-text answers. Needs embeddings switched on.",
   ranking: "Whether the two of you picked each other in the ranking round.",
 };

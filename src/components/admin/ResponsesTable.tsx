@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { AnswerList } from "./AnswerList";
 import { ProfileCardView } from "@/components/ProfileCardView";
-import { QUESTIONS_BY_ID, type BackgroundQuestion } from "@/lib/questions";
 import type { ProfileCard } from "@/lib/profile-cards";
 
 export type ResponseRow = {
@@ -17,35 +16,26 @@ export type ResponseRow = {
   card: ProfileCard | null;
 };
 
-const YEARS = (QUESTIONS_BY_ID.q30 as BackgroundQuestion).yearOptions;
-
 export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
   const [open, setOpen] = useState<string | null>(null);
   const [role, setRole] = useState<"all" | "mentor" | "mentee">("all");
-  const [year, setYear] = useState("all");
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
       if (role !== "all" && r.role !== role) return false;
-      const background = (r.answers?.q30 ?? {}) as { year?: string; focus?: string };
-      if (year !== "all" && background.year !== year) return false;
       if (!q) return true;
-      return (
-        r.name.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q) ||
-        (background.focus ?? "").toLowerCase().includes(q)
-      );
+      return r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q);
     });
-  }, [rows, role, year, query]);
+  }, [rows, role, query]);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         <input
           className="input w-56"
-          placeholder="Search name, email or focus…"
+          placeholder="Search name or email…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -58,14 +48,6 @@ export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
           <option value="mentor">Mentors</option>
           <option value="mentee">Mentees</option>
         </select>
-        <select className="input w-auto" value={year} onChange={(e) => setYear(e.target.value)}>
-          <option value="all">Any year</option>
-          {YEARS.map((y) => (
-            <option key={y.id} value={y.id}>
-              {y.label}
-            </option>
-          ))}
-        </select>
         <span className="self-center text-xs text-muted">
           {filtered.length} of {rows.length}
         </span>
@@ -75,7 +57,6 @@ export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
         {filtered.length === 0 && <p className="px-4 py-6 text-sm text-muted">Nothing matches.</p>}
         {filtered.map((row) => {
           const isOpen = open === row.id;
-          const background = (row.answers?.q30 ?? {}) as { year?: string; focus?: string };
           return (
             <div key={row.id}>
               <button
@@ -86,7 +67,6 @@ export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
                 <span className="w-5 text-xs text-faint">{isOpen ? "▾" : "▸"}</span>
                 <span className="flex-1 font-medium">{row.name}</span>
                 <span className="w-16 text-xs text-muted">{row.role}</span>
-                <span className="w-32 truncate text-xs text-muted">{background.focus ?? ""}</span>
                 <span className="w-16 text-right text-xs tabular-nums text-faint">
                   {row.display_number ? `#${row.display_number}` : "—"}
                 </span>

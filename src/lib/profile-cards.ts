@@ -6,13 +6,7 @@
  * not to who they already know.
  */
 
-import {
-  QUESTIONS_BY_ID,
-  SCALE_QUESTIONS,
-  type BackgroundQuestion,
-  type MultiQuestion,
-  type SelectQuestion,
-} from "./questions";
+import { QUESTIONS_BY_ID, SCALE_QUESTIONS, type MultiQuestion } from "./questions";
 import { OTHER_PREFIX } from "./validation";
 import type { Answers } from "./scoring";
 
@@ -21,11 +15,9 @@ export type StandoutTrait = { label: string; source: string; value: number };
 export type ProfileCard = {
   display_number: number;
   role: "mentor" | "mentee";
-  background: { year: string; focus: string };
   values: string[];
   excited_about: string;
   ideal_relationship: string;
-  group_role: string;
   standout_traits: StandoutTrait[];
   wants: { closeness: number; communication: number; cadence: number };
 };
@@ -37,16 +29,6 @@ export function valueLabel(token: string): string {
   if (token.startsWith(OTHER_PREFIX)) return token.slice(OTHER_PREFIX.length).trim();
   const q = QUESTIONS_BY_ID.q26 as MultiQuestion;
   return q.options.find((o) => o.id === token)?.label ?? token;
-}
-
-export function roleLabel(id: string): string {
-  const q = QUESTIONS_BY_ID.q29 as SelectQuestion;
-  return q.options.find((o) => o.id === id)?.label ?? id;
-}
-
-export function yearLabel(id: string): string {
-  const q = QUESTIONS_BY_ID.q30 as BackgroundQuestion;
-  return q.yearOptions.find((o) => o.id === id)?.label ?? id;
 }
 
 const num = (answers: Answers, id: string, fallback = MIDPOINT): number => {
@@ -91,20 +73,14 @@ export function buildCard(
   displayNumber: number,
   answers: Answers,
 ): ProfileCard {
-  const background = (answers.q30 ?? {}) as { year?: string; focus?: string };
   const values = Array.isArray(answers.q26) ? (answers.q26 as string[]) : [];
 
   return {
     display_number: displayNumber,
     role,
-    background: {
-      year: yearLabel(background.year ?? ""),
-      focus: background.focus ?? "",
-    },
     values: values.map(valueLabel),
     excited_about: str(answers, "q27"),
     ideal_relationship: str(answers, "q28"),
-    group_role: roleLabel(str(answers, "q29")),
     standout_traits: standoutTraits(answers),
     wants: {
       closeness: num(answers, "q23"),

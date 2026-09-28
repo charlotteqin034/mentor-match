@@ -126,7 +126,8 @@ export function TraitSurvey({
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Hi {name.split(" ")[0]}.</h1>
         <p className="mt-3 max-w-prose text-muted">
-          Thirty questions, about ten minutes. Answer honestly rather than aspirationally —
+          {QUESTIONS.length} questions, about ten minutes. Answer honestly rather than
+          aspirationally —
           this is used to pair you with someone, so a flattering answer just gets you a
           worse match. Nobody sees your answers but the organiser.
         </p>
@@ -328,53 +329,5 @@ function QuestionInput({
       );
     }
 
-    case "select":
-      return (
-        <div className="flex flex-wrap gap-2">
-          {question.options.map((option) => {
-            const on = value === option.id;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => onChange(option.id)}
-                className={`rounded-full border px-3 py-1.5 text-sm transition ${
-                  on
-                    ? "border-accent bg-accent text-white"
-                    : "border-line bg-card text-muted hover:border-accent/50"
-                }`}
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-      );
-
-    case "background": {
-      const v = (value ?? {}) as { year?: string; focus?: string };
-      return (
-        <div className="grid gap-2 sm:grid-cols-2">
-          <select
-            className="input"
-            value={v.year ?? ""}
-            onChange={(e) => onChange({ ...v, year: e.target.value })}
-          >
-            <option value="">Year / experience level…</option>
-            {question.yearOptions.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <input
-            className="input"
-            placeholder={question.focusLabel}
-            value={v.focus ?? ""}
-            onChange={(e) => onChange({ ...v, focus: e.target.value })}
-          />
-        </div>
-      );
-    }
   }
 }

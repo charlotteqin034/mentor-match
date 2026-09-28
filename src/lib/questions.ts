@@ -5,7 +5,7 @@
  * all read from this array. Nothing about a question is hardcoded in JSX.
  */
 
-export type SectionId = "about" | "how" | "looking" | "quick";
+export type SectionId = "about" | "how" | "looking";
 
 export const SECTIONS: { id: SectionId; title: string; blurb?: string }[] = [
   {
@@ -19,7 +19,6 @@ export const SECTIONS: { id: SectionId; title: string; blurb?: string }[] = [
     blurb: "These three matter a lot. Be honest about the amount of contact you actually want.",
   },
   { id: "looking", title: "What you're looking for" },
-  { id: "quick", title: "Quick ones" },
 ];
 
 /** Printed verbatim above the first block of scale questions. */
@@ -32,18 +31,9 @@ export const SCALE_INSTRUCTION =
  *  - cross_pref  : "what I want in them" vs their own answer (§8b)
  *  - gap         : logistics agreement, heavily weighted     (§8c)
  *  - jaccard     : set overlap                               (§8d)
- *  - group_role  : complementarity lookup                    (§8d)
  *  - text        : embeddings when enabled, else display only(§8e)
- *  - display     : never scored
  */
-export type ScoringMode =
-  | "similarity"
-  | "cross_pref"
-  | "gap"
-  | "jaccard"
-  | "group_role"
-  | "text"
-  | "display";
+export type ScoringMode = "similarity" | "cross_pref" | "gap" | "jaccard" | "text";
 
 type Base = {
   id: string;
@@ -84,25 +74,7 @@ export type TextQuestion = Base & {
   maxLength: number;
 };
 
-export type SelectQuestion = Base & {
-  kind: "select";
-  mode: "group_role";
-  options: { id: string; label: string }[];
-};
-
-export type BackgroundQuestion = Base & {
-  kind: "background";
-  mode: "display";
-  yearOptions: { id: string; label: string }[];
-  focusLabel: string;
-};
-
-export type Question =
-  | ScaleQuestion
-  | MultiQuestion
-  | TextQuestion
-  | SelectQuestion
-  | BackgroundQuestion;
+export type Question = ScaleQuestion | MultiQuestion | TextQuestion;
 
 const scale = (
   id: string,
@@ -289,38 +261,6 @@ export const QUESTIONS: Question[] = [
     maxLength: 280,
   },
 
-  // ---- Section D: quick ones ----------------------------------------------
-  {
-    kind: "select",
-    id: "q29",
-    section: "quick",
-    text: "In a group project, you're usually…",
-    mode: "group_role",
-    options: [
-      { id: "planner", label: "The planner" },
-      { id: "idea", label: "The idea person" },
-      { id: "doer", label: "The doer" },
-      { id: "mediator", label: "The mediator" },
-    ],
-  },
-  {
-    kind: "background",
-    id: "q30",
-    section: "quick",
-    text: "A bit of background",
-    mode: "display",
-    focusLabel: "Focus area or major",
-    yearOptions: [
-      { id: "1st_year", label: "1st year" },
-      { id: "2nd_year", label: "2nd year" },
-      { id: "3rd_year", label: "3rd year" },
-      { id: "4th_year", label: "4th year+" },
-      { id: "grad", label: "Grad student" },
-      { id: "early_career", label: "Early career (0–3 yrs)" },
-      { id: "mid_career", label: "Mid career (4–10 yrs)" },
-      { id: "senior", label: "Senior (10+ yrs)" },
-    ],
-  },
 ];
 
 export const QUESTIONS_BY_ID: Record<string, Question> = Object.fromEntries(
@@ -333,20 +273,6 @@ export const SCALE_QUESTIONS = QUESTIONS.filter(
 
 export const questionsInSection = (section: SectionId) =>
   QUESTIONS.filter((q) => q.section === section);
-
-/** Group-role complementarity (§8d). A guess, not science — flatten it freely. */
-export const GROUP_ROLE_SCORES = {
-  same: 0.4,
-  complementary: 1.0,
-  neutral: 0.7,
-} as const;
-
-export const COMPLEMENTARY_ROLE_PAIRS: [string, string][] = [
-  ["planner", "idea"],
-  ["doer", "mediator"],
-  ["planner", "doer"],
-  ["idea", "mediator"],
-];
 
 export const SCALE_MIN = 1;
 export const SCALE_MAX = 7;

@@ -41,19 +41,6 @@ function checkOne(q: Question, raw: unknown): { error?: string; value?: unknown 
       if (s.length > q.maxLength) return { error: `Keep it under ${q.maxLength} characters.` };
       return { value: s };
     }
-    case "select": {
-      const s = typeof raw === "string" ? raw : "";
-      if (!q.options.some((o) => o.id === s)) return { error: "Pick one." };
-      return { value: s };
-    }
-    case "background": {
-      const v = (raw ?? {}) as { year?: unknown; focus?: unknown };
-      const year = typeof v.year === "string" ? v.year : "";
-      const focus = typeof v.focus === "string" ? v.focus.trim() : "";
-      if (!q.yearOptions.some((o) => o.id === year)) return { error: "Pick your year." };
-      if (!focus) return { error: "Add your focus area or major." };
-      return { value: { year, focus: focus.slice(0, 120) } };
-    }
   }
 }
 

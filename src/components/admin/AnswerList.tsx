@@ -1,7 +1,7 @@
 "use client";
 
 import { QUESTIONS, type Question } from "@/lib/questions";
-import { roleLabel, valueLabel, yearLabel } from "@/lib/profile-cards";
+import { valueLabel } from "@/lib/profile-cards";
 
 function renderAnswer(question: Question, value: unknown): React.ReactNode {
   switch (question.kind) {
@@ -37,22 +37,6 @@ function renderAnswer(question: Question, value: unknown): React.ReactNode {
       ) : (
         <span className="text-faint">—</span>
       );
-    case "select":
-      return typeof value === "string" ? (
-        <span>{roleLabel(value)}</span>
-      ) : (
-        <span className="text-faint">—</span>
-      );
-    case "background": {
-      const v = (value ?? {}) as { year?: string; focus?: string };
-      return v.year ? (
-        <span>
-          {yearLabel(v.year)} · {v.focus}
-        </span>
-      ) : (
-        <span className="text-faint">—</span>
-      );
-    }
   }
 }
 

@@ -6,7 +6,7 @@ export const COMPONENT_COLORS: Record<WeightKey, string> = {
   traits: "#3d6b5c",
   crossPref: "#7fa88f",
   closeness: "#c2703d",
-  valuesRole: "#7d6ba8",
+  values: "#7d6ba8",
   openText: "#4a7fa8",
   ranking: "#b8a13a",
 };

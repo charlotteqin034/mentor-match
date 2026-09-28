@@ -67,7 +67,7 @@ No paid services anywhere.
 
 | Stage | What happens | Who |
 |---|---|---|
-| 1 | Trait survey — 30 questions | Everyone |
+| 1 | Trait survey — 28 questions | Everyone |
 | 2 | Generate anonymised profile cards | Organiser |
 | 3 | Ranking survey — each side ranks the other's cards | Everyone |
 | 4 | Build the score matrix, tune weights, run Hungarian | Organiser |
@@ -102,7 +102,7 @@ Every component returns a value in `[0, 1]` *before* weighting, so the weights
 are directly comparable. Default weights:
 
 ```ts
-{ traits: 0.42, crossPref: 0.08, closeness: 0.25, valuesRole: 0.05, openText: 0.05, ranking: 0.15 }
+{ traits: 0.42, crossPref: 0.08, closeness: 0.25, values: 0.05, openText: 0.05, ranking: 0.15 }
 ```
 
 | Component | Questions | How |
@@ -110,7 +110,7 @@ are directly comparable. Default weights:
 | **Trait similarity** | 21 scale questions | `1 − |a − b| / 6`, weighted mean |
 | **Cross-preference** | q10 → q15 | The scales run opposite ways, so the hoped-for partner answer is `8 − mine`; both directions, averaged |
 | **Closeness & logistics** | q23, q24, q25 | Same gap formula, own component, q23 weighted double — a light-touch mentor with a close-mentorship mentee is the most damaging mismatch there is |
-| **Values & group role** | q26, q29 | Jaccard overlap (75%) + a complementarity lookup (25%) |
+| **Values overlap** | q26 | Jaccard index over the selected sets |
 | **Open text** | q27 + q28 | Cosine similarity of embeddings. Excluded entirely when disabled |
 | **Ranking** | ranking round | `(K − r + 1) / K`; mutual → average, one-sided → half credit, neither → 0 |
 
@@ -133,9 +133,7 @@ and *Save as new run* do. Every saved run keeps the weights it used, so two
 weightings can be compared side by side in Run history.
 
 Per-question weights are also supported: add `weight` to any question in
-`src/lib/questions.ts` to emphasise it inside its component. The group-role
-complementarity table lives there too — it's a guess, not science, and flattening
-it is one edit.
+`src/lib/questions.ts` to emphasise it inside its component.
 
 ### Manual override
 
@@ -147,7 +145,7 @@ Save the result as a new run to publish it.
 
 ## The question bank
 
-All 30 questions live in `src/lib/questions.ts` — text, anchors, scoring mode,
+All 28 questions live in `src/lib/questions.ts` — text, anchors, scoring mode,
 and the phrase pair used to build profile-card traits. Rendering, validation and
 scoring all read from that one array; nothing is hardcoded in JSX. Adding or
 reordering a question is a single edit.
@@ -162,7 +160,7 @@ someone already knows.
 
 ```
 src/lib/
-  questions.ts      the 30 questions — single source of truth
+  questions.ts      the question bank — single source of truth
   scoring.ts        §8 pipeline, pure and fully unit-tested
   matching.ts       score matrix + Hungarian solve
   override.ts       manual swaps (kept apart so the solver stays server-side)

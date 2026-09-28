@@ -47,11 +47,7 @@ export function ProfileCardView({
       <header className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold">Profile #{card.display_number}</h3>
-          <p className="text-xs text-muted">
-            {card.background.year}
-            {card.background.focus ? ` · ${card.background.focus}` : ""}
-            {showRole ? ` · ${card.role}` : ""}
-          </p>
+          {showRole && <p className="text-xs text-muted">{card.role}</p>}
         </div>
         {action}
       </header>
@@ -77,10 +73,7 @@ export function ProfileCardView({
         </div>
         <div>
           <dt className="label">Hoping for</dt>
-          <dd className="mt-0.5 leading-snug text-muted">
-            {card.values.join(" · ")}
-            {card.group_role ? ` — usually ${card.group_role.toLowerCase()}` : ""}
-          </dd>
+          <dd className="mt-0.5 leading-snug text-muted">{card.values.join(" · ")}</dd>
         </div>
       </dl>
 

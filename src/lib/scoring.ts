@@ -15,8 +15,6 @@
  */
 
 import {
-  COMPLEMENTARY_ROLE_PAIRS,
-  GROUP_ROLE_SCORES,
   SCALE_MAX,
   SCALE_MIN,
   SCALE_QUESTIONS,
@@ -29,7 +27,7 @@ export type WeightKey =
   | "traits"
   | "crossPref"
   | "closeness"
-  | "valuesRole"
+  | "values"
   | "openText"
   | "ranking";
 
@@ -39,7 +37,7 @@ export const WEIGHT_KEYS: WeightKey[] = [
   "traits",
   "crossPref",
   "closeness",
-  "valuesRole",
+  "values",
   "openText",
   "ranking",
 ];
@@ -48,7 +46,7 @@ export const WEIGHT_LABELS: Record<WeightKey, string> = {
   traits: "Trait similarity",
   crossPref: "Cross-preference",
   closeness: "Closeness & logistics",
-  valuesRole: "Values & group role",
+  values: "Values overlap",
   openText: "Open text",
   ranking: "Mutual ranking",
 };
@@ -57,7 +55,7 @@ export const DEFAULT_WEIGHTS: Weights = {
   traits: 0.42, // §8a
   crossPref: 0.08, // §8b
   closeness: 0.25, // §8c
-  valuesRole: 0.05, // §8d
+  values: 0.05, // §8d
   openText: 0.05, // §8e — excluded and renormalised when embeddings are off
   ranking: 0.15, // §8f
 };
@@ -91,12 +89,6 @@ export function scaleAnswer(answers: Answers | null | undefined, id: string): nu
   if (typeof v !== "number" || !Number.isFinite(v)) return null;
   if (v < SCALE_MIN || v > SCALE_MAX) return null;
   return v;
-}
-
-function stringAnswer(answers: Answers | null | undefined, id: string): string | null {
-  if (!answers) return null;
-  const v = answers[id];
-  return typeof v === "string" && v.trim() ? v.trim() : null;
 }
 
 function normaliseValueToken(token: string): string {
@@ -204,7 +196,7 @@ export function closenessGap(a: Answers | null, b: Answers | null): number | nul
 }
 
 // ---------------------------------------------------------------------------
-// §8d — values overlap + group role
+// §8d — values overlap
 // ---------------------------------------------------------------------------
 
 export function jaccard(a: Set<string>, b: Set<string>): number {
@@ -215,28 +207,11 @@ export function jaccard(a: Set<string>, b: Set<string>): number {
   return union === 0 ? 0 : intersection / union;
 }
 
-export function groupRoleScore(a: string | null, b: string | null): number | null {
-  if (!a || !b) return null;
-  if (a === b) return GROUP_ROLE_SCORES.same;
-  const complementary = COMPLEMENTARY_ROLE_PAIRS.some(
-    ([x, y]) => (x === a && y === b) || (x === b && y === a),
-  );
-  return complementary ? GROUP_ROLE_SCORES.complementary : GROUP_ROLE_SCORES.neutral;
-}
-
-export const VALUES_ROLE_SPLIT = { values: 0.75, role: 0.25 } as const;
-
-export function valuesAndRole(a: Answers | null, b: Answers | null): number | null {
-  const parts: { value: number; weight: number }[] = [];
-
+export function valuesOverlap(a: Answers | null, b: Answers | null): number | null {
   const av = valueSet(a);
   const bv = valueSet(b);
-  if (av && bv) parts.push({ value: jaccard(av, bv), weight: VALUES_ROLE_SPLIT.values });
-
-  const role = groupRoleScore(stringAnswer(a, "q29"), stringAnswer(b, "q29"));
-  if (role !== null) parts.push({ value: role, weight: VALUES_ROLE_SPLIT.role });
-
-  return weightedMean(parts);
+  if (!av || !bv) return null;
+  return jaccard(av, bv);
 }
 
 // ---------------------------------------------------------------------------
@@ -325,7 +300,7 @@ export function scorePair(a: Side, b: Side, weights: Weights = DEFAULT_WEIGHTS):
     traits: traitSimilarity(a.answers, b.answers),
     crossPref: crossPreference(a.answers, b.answers),
     closeness: closenessGap(a.answers, b.answers),
-    valuesRole: valuesAndRole(a.answers, b.answers),
+    values: valuesOverlap(a.answers, b.answers),
     openText: openTextSimilarity(a.embedding, b.embedding),
     ranking: rankingComponent(a, b),
   };

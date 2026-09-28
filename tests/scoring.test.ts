@@ -6,15 +6,15 @@ import {
   combine,
   crossPreference,
   expectedPartnerAnswer,
-  groupRoleScore,
   jaccard,
   openTextSimilarity,
   rankingComponent,
   scorePair,
   traitSimilarity,
-  valuesAndRole,
+  valuesOverlap,
   type Side,
 } from "@/lib/scoring";
+import { QUESTIONS, SECTIONS } from "@/lib/questions";
 import { answersAt } from "./fixtures";
 
 const side = (id: string, over: Partial<Side> = {}): Side => ({
@@ -22,6 +22,25 @@ const side = (id: string, over: Partial<Side> = {}): Side => ({
   answers: answersAt(4),
   ranks: [],
   ...over,
+});
+
+describe("the question bank", () => {
+  it("is 28 questions across three sections", () => {
+    expect(QUESTIONS).toHaveLength(28);
+    expect(SECTIONS.map((s) => s.id)).toEqual(["about", "how", "looking"]);
+  });
+
+  it("no longer carries the group-project role or the background question", () => {
+    const ids = QUESTIONS.map((q) => q.id);
+    expect(ids).not.toContain("q29");
+    expect(ids).not.toContain("q30");
+    expect(ids.at(-1)).toBe("q28");
+  });
+
+  it("puts every question in a section that actually exists", () => {
+    const sectionIds = new Set(SECTIONS.map((s) => s.id));
+    for (const q of QUESTIONS) expect(sectionIds.has(q.section)).toBe(true);
+  });
 });
 
 describe("§8a trait similarity", () => {
@@ -124,7 +143,7 @@ describe("§8c closeness / logistics", () => {
   });
 });
 
-describe("§8d values overlap and group role", () => {
+describe("§8d values overlap", () => {
   it("computes the Jaccard index", () => {
     expect(jaccard(new Set(["a", "b"]), new Set(["a", "b"]))).toBe(1);
     expect(jaccard(new Set(["a", "b"]), new Set(["b", "c"]))).toBeCloseTo(1 / 3, 10);
@@ -134,30 +153,20 @@ describe("§8d values overlap and group role", () => {
   it("treats free-text 'other' values case- and space-insensitively", () => {
     const a = answersAt(4, { q26: ["network", "other:Finding  a Research LAB"] });
     const b = answersAt(4, { q26: ["network", "other:finding a research lab"] });
-    expect(valuesAndRole(a, b)).toBeCloseTo(0.75 * 1 + 0.25 * 0.4, 10);
+    expect(valuesOverlap(a, b)).toBe(1);
   });
 
-  it("applies the group-role lookup", () => {
-    expect(groupRoleScore("planner", "planner")).toBe(0.4);
-    expect(groupRoleScore("planner", "idea")).toBe(1.0);
-    expect(groupRoleScore("doer", "mediator")).toBe(1.0);
-    expect(groupRoleScore("planner", "mediator")).toBe(0.7);
-    expect(groupRoleScore("idea", "doer")).toBe(0.7);
-    expect(groupRoleScore(null, "doer")).toBeNull();
+  it("scores partial overlap proportionally", () => {
+    const a = answersAt(4, { q26: ["network", "confidence"] });
+    const b = answersAt(4, { q26: ["network", "career_clarity"] });
+    expect(valuesOverlap(a, b)).toBeCloseTo(1 / 3, 10);
   });
 
-  it("splits the component 75/25 between values and role", () => {
-    const a = answersAt(4, { q26: ["network", "confidence"], q29: "planner" });
-    const b = answersAt(4, { q26: ["network", "confidence"], q29: "idea" });
-    expect(valuesAndRole(a, b)).toBeCloseTo(0.75 * 1 + 0.25 * 1, 10);
-  });
-
-  it("renormalises inside the component when only one half is answerable", () => {
-    const a = answersAt(4, { q29: "planner" });
-    const b = answersAt(4, { q29: "idea" });
+  it("returns null when either side didn't answer", () => {
+    const a = answersAt(4);
+    const b = answersAt(4);
     delete a.q26;
-    delete b.q26;
-    expect(valuesAndRole(a, b)).toBe(1.0);
+    expect(valuesOverlap(a, b)).toBeNull();
   });
 });
 
@@ -222,7 +231,7 @@ describe("§8g combining and renormalisation", () => {
         traits: 1,
         crossPref: 1,
         closeness: 1,
-        valuesRole: 1,
+        values: 1,
         openText: null,
         ranking: 1,
       },
@@ -236,11 +245,11 @@ describe("§8g combining and renormalisation", () => {
 
   it("does not let a disabled component drag scores down", () => {
     const withText = combine(
-      { traits: 1, crossPref: 1, closeness: 1, valuesRole: 1, openText: 1, ranking: 1 },
+      { traits: 1, crossPref: 1, closeness: 1, values: 1, openText: 1, ranking: 1 },
       DEFAULT_WEIGHTS,
     );
     const withoutText = combine(
-      { traits: 1, crossPref: 1, closeness: 1, valuesRole: 1, openText: null, ranking: 1 },
+      { traits: 1, crossPref: 1, closeness: 1, values: 1, openText: null, ranking: 1 },
       DEFAULT_WEIGHTS,
     );
     expect(withoutText.total).toBeCloseTo(withText.total, 10);

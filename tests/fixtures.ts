@@ -13,8 +13,6 @@ export const VALUE_IDS = [
   "direction",
 ];
 
-export const ROLE_IDS = ["planner", "idea", "doer", "mediator"];
-
 /** A complete, valid answer set with every scale question set to `scaleValue`. */
 export function answersAt(scaleValue: number, overrides: Answers = {}): Answers {
   const answers: Answers = {};
@@ -22,8 +20,6 @@ export function answersAt(scaleValue: number, overrides: Answers = {}): Answers 
   answers.q26 = ["career_clarity", "network"];
   answers.q27 = "I'm building a small synth out of parts from a broken keyboard.";
   answers.q28 = "Someone I can ask half-formed questions without feeling silly.";
-  answers.q29 = "planner";
-  answers.q30 = { year: "3rd_year", focus: "Mechanical Engineering" };
   return { ...answers, ...overrides };
 }
 
@@ -55,8 +51,6 @@ export function syntheticCohort(
     answers.q26 = [...values];
     answers.q27 = `Synthetic ${role} ${i} is excited about something.`;
     answers.q28 = `Synthetic ${role} ${i} wants a supportive relationship.`;
-    answers.q29 = pick(ROLE_IDS);
-    answers.q30 = { year: "3rd_year", focus: "Synthetic Studies" };
 
     return {
       id: `${role}-${i}`,
