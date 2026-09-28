@@ -9,7 +9,7 @@ export type ResponseRow = {
   id: string;
   name: string;
   email: string;
-  role: "mentor" | "mentee";
+  role: "big" | "little";
   display_number: number | null;
   submitted_at: string | null;
   answers: Record<string, unknown> | null;
@@ -18,7 +18,7 @@ export type ResponseRow = {
 
 export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
   const [open, setOpen] = useState<string | null>(null);
-  const [role, setRole] = useState<"all" | "mentor" | "mentee">("all");
+  const [role, setRole] = useState<"all" | "big" | "little">("all");
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -42,11 +42,11 @@ export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
         <select
           className="input w-auto"
           value={role}
-          onChange={(e) => setRole(e.target.value as "all" | "mentor" | "mentee")}
+          onChange={(e) => setRole(e.target.value as "all" | "big" | "little")}
         >
           <option value="all">Both roles</option>
-          <option value="mentor">Mentors</option>
-          <option value="mentee">Mentees</option>
+          <option value="big">Bigs</option>
+          <option value="little">Littles</option>
         </select>
         <span className="self-center text-xs text-muted">
           {filtered.length} of {rows.length}
@@ -83,7 +83,7 @@ export function ResponsesTable({ rows }: { rows: ResponseRow[] }) {
                 <div className="border-t border-line/60 bg-paper px-4 py-4">
                   {row.answers ? (
                     <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
-                      <AnswerList answers={row.answers} />
+                      <AnswerList answers={row.answers} role={row.role} />
                       <div>
                         <p className="label mb-2">Profile card preview</p>
                         {row.card ? (

@@ -128,8 +128,8 @@ export async function loadMatchInput(
   roundId: string,
   embeddingsEnabled?: boolean,
 ): Promise<{
-  mentors: MatchParticipant[];
-  mentees: MatchParticipant[];
+  bigs: MatchParticipant[];
+  littles: MatchParticipant[];
   blocked: BlockedPair[];
   participants: Participant[];
 }> {
@@ -166,8 +166,8 @@ export async function loadMatchInput(
   });
 
   return {
-    mentors: participants.filter((p) => p.role === "mentor").map(toMatchParticipant),
-    mentees: participants.filter((p) => p.role === "mentee").map(toMatchParticipant),
+    bigs: participants.filter((p) => p.role === "big").map(toMatchParticipant),
+    littles: participants.filter((p) => p.role === "little").map(toMatchParticipant),
     blocked,
     participants,
   };

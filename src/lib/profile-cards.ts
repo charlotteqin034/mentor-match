@@ -19,7 +19,7 @@ export type StandoutTrait = { label: string; source: string; value: number };
 
 export type ProfileCard = {
   display_number: number;
-  role: "mentor" | "mentee";
+  role: "big" | "little";
   values: string[];
   excited_about: string;
   ideal_relationship: string;
@@ -73,7 +73,7 @@ export function standoutTraits(answers: Answers): StandoutTrait[] {
 }
 
 export function buildCard(
-  role: "mentor" | "mentee",
+  role: "big" | "little",
   displayNumber: number,
   answers: Answers,
 ): ProfileCard {

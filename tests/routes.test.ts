@@ -65,16 +65,16 @@ async function seedRound() {
     req("/api/admin/participants", {
       action: "bulk",
       round_id: roundId,
-      role: "mentor",
-      text: NAMES.map((n) => `${n} Mentor, ${n.toLowerCase()}.m@example.com`).join("\n"),
+      role: "big",
+      text: NAMES.map((n) => `${n} Big, ${n.toLowerCase()}.m@example.com`).join("\n"),
     }),
   );
   await participantsRoute(
     req("/api/admin/participants", {
       action: "bulk",
       round_id: roundId,
-      role: "mentee",
-      text: NAMES.map((n) => `${n} Mentee, ${n.toLowerCase()}.e@example.com`).join("\n"),
+      role: "little",
+      text: NAMES.map((n) => `${n} Little, ${n.toLowerCase()}.e@example.com`).join("\n"),
     }),
   );
   return roundId;
@@ -82,7 +82,7 @@ async function seedRound() {
 
 const people = () => store.tables.participants as unknown as {
   id: string;
-  role: "mentor" | "mentee";
+  role: "big" | "little";
   name: string;
   token: string;
   display_number: number | null;
@@ -147,16 +147,46 @@ describe("stage gating", () => {
   it("rejects an incomplete answer set with per-question errors", async () => {
     const roundId = await seedRound();
     await setStage(roundId, "trait_survey");
-    const partial = answersAt(4);
+    const little = people().find((p) => p.role === "little")!;
+    const partial = answersAt(3);
     delete partial.q26;
     delete partial.q27;
     const res = await traitRoute(
-      req("/api/trait-response", { token: people()[0].token, answers: partial }),
+      req("/api/trait-response", { token: little.token, answers: partial }),
     );
     expect(res.status).toBe(422);
     const body = await json(res);
     expect(Object.keys(body.errors as object).sort()).toEqual(["q26", "q27"]);
     expect(store.tables.trait_responses).toHaveLength(0);
+  });
+
+  it("doesn't ask a big for q26 at all", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "trait_survey");
+    const big = people().find((p) => p.role === "big")!;
+
+    const withoutQ26 = answersAt(3);
+    delete withoutQ26.q26;
+    const res = await traitRoute(
+      req("/api/trait-response", { token: big.token, answers: withoutQ26 }),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("drops q26 from a big's stored answers even if it's submitted", async () => {
+    const roundId = await seedRound();
+    await setStage(roundId, "trait_survey");
+    const big = people().find((p) => p.role === "big")!;
+
+    await traitRoute(
+      req("/api/trait-response", {
+        token: big.token,
+        answers: answersAt(3, { q26: ["network", "social"] }),
+      }),
+    );
+    const stored = store.tables.trait_responses[0].answers as Record<string, unknown>;
+    expect(stored).not.toHaveProperty("q26");
+    expect(stored).toHaveProperty("q27");
   });
 });
 
@@ -169,7 +199,7 @@ describe("participants", () => {
         round_id: roundId,
         name: "Ada Again",
         email: "ada.m@example.com",
-        role: "mentor",
+        role: "big",
       }),
     );
     expect(res.status).toBe(409);
@@ -182,7 +212,7 @@ describe("participants", () => {
         req("/api/admin/participants", {
           action: "bulk",
           round_id: roundId,
-          role: "mentee",
+          role: "little",
           text: "Valid Person, valid@example.com\nBroken Line\nAlso Broken, not-an-email",
         }),
       ),
@@ -241,48 +271,48 @@ describe("rankings", () => {
 
   it("stores an ordered shortlist and marks the ranker done", async () => {
     await readyToRank();
-    const mentor = people().find((p) => p.role === "mentor")!;
-    const mentees = people().filter((p) => p.role === "mentee");
+    const big = people().find((p) => p.role === "big")!;
+    const littles = people().filter((p) => p.role === "little");
     const res = await rankingsRoute(
       req("/api/rankings", {
-        token: mentor.token,
-        ranked: mentees.slice(0, 5).map((p) => p.id),
+        token: big.token,
+        ranked: littles.slice(0, 5).map((p) => p.id),
       }),
     );
     expect(res.status).toBe(200);
 
-    const stored = store.tables.rankings.filter((r) => r.ranker_id === mentor.id);
+    const stored = store.tables.rankings.filter((r) => r.ranker_id === big.id);
     expect(stored.map((r) => r.rank).sort()).toEqual([1, 2, 3, 4, 5]);
-    expect(people().find((p) => p.id === mentor.id)!.ranking_completed_at).toBeTruthy();
+    expect(people().find((p) => p.id === big.id)!.ranking_completed_at).toBeTruthy();
   });
 
   it("replaces a previous submission rather than appending to it", async () => {
     await readyToRank();
-    const mentor = people().find((p) => p.role === "mentor")!;
-    const mentees = people().filter((p) => p.role === "mentee");
-    const body = { token: mentor.token, ranked: mentees.slice(0, 5).map((p) => p.id) };
+    const big = people().find((p) => p.role === "big")!;
+    const littles = people().filter((p) => p.role === "little");
+    const body = { token: big.token, ranked: littles.slice(0, 5).map((p) => p.id) };
     await rankingsRoute(req("/api/rankings", body));
     await rankingsRoute(
       req("/api/rankings", {
-        token: mentor.token,
-        ranked: mentees.slice(1, 6).map((p) => p.id),
+        token: big.token,
+        ranked: littles.slice(1, 6).map((p) => p.id),
       }),
     );
-    expect(store.tables.rankings.filter((r) => r.ranker_id === mentor.id)).toHaveLength(5);
+    expect(store.tables.rankings.filter((r) => r.ranker_id === big.id)).toHaveLength(5);
   });
 
   it("rejects a short shortlist, duplicates, and anyone from the ranker's own side", async () => {
     await readyToRank();
-    const mentor = people().find((p) => p.role === "mentor")!;
-    const mentors = people().filter((p) => p.role === "mentor");
-    const mentees = people().filter((p) => p.role === "mentee");
+    const big = people().find((p) => p.role === "big")!;
+    const bigs = people().filter((p) => p.role === "big");
+    const littles = people().filter((p) => p.role === "little");
 
     expect(
       (
         await rankingsRoute(
           req("/api/rankings", {
-            token: mentor.token,
-            ranked: mentees.slice(0, 3).map((p) => p.id),
+            token: big.token,
+            ranked: littles.slice(0, 3).map((p) => p.id),
           }),
         )
       ).status,
@@ -292,8 +322,8 @@ describe("rankings", () => {
       (
         await rankingsRoute(
           req("/api/rankings", {
-            token: mentor.token,
-            ranked: [...mentees.slice(0, 4), mentees[0]].map((p) => p.id),
+            token: big.token,
+            ranked: [...littles.slice(0, 4), littles[0]].map((p) => p.id),
           }),
         )
       ).status,
@@ -303,8 +333,8 @@ describe("rankings", () => {
       (
         await rankingsRoute(
           req("/api/rankings", {
-            token: mentor.token,
-            ranked: [...mentees.slice(0, 4), mentors[1]].map((p) => p.id),
+            token: big.token,
+            ranked: [...littles.slice(0, 4), bigs[1]].map((p) => p.id),
           }),
         )
       ).status,
@@ -320,22 +350,22 @@ describe("matching, override and publishing", () => {
     await profilesRoute(req("/api/admin/profiles", { round_id: roundId }));
     await setStage(roundId, "ranking_survey");
 
-    const mentors = people().filter((p) => p.role === "mentor");
-    const mentees = people().filter((p) => p.role === "mentee");
-    // Everyone ranks except the last mentor — matching must cope with that.
-    for (const [i, mentor] of mentors.slice(0, -1).entries()) {
+    const bigs = people().filter((p) => p.role === "big");
+    const littles = people().filter((p) => p.role === "little");
+    // Everyone ranks except the last big — matching must cope with that.
+    for (const [i, big] of bigs.slice(0, -1).entries()) {
       await rankingsRoute(
         req("/api/rankings", {
-          token: mentor.token,
-          ranked: [...mentees.slice(i), ...mentees.slice(0, i)].slice(0, 5).map((p) => p.id),
+          token: big.token,
+          ranked: [...littles.slice(i), ...littles.slice(0, i)].slice(0, 5).map((p) => p.id),
         }),
       );
     }
-    for (const [i, mentee] of mentees.entries()) {
+    for (const [i, little] of littles.entries()) {
       await rankingsRoute(
         req("/api/rankings", {
-          token: mentee.token,
-          ranked: [...mentors.slice(i), ...mentors.slice(0, i)].slice(0, 5).map((p) => p.id),
+          token: little.token,
+          ranked: [...bigs.slice(i), ...bigs.slice(0, i)].slice(0, 5).map((p) => p.id),
         }),
       );
     }
@@ -350,12 +380,12 @@ describe("matching, override and publishing", () => {
     );
     const result = body.result as {
       pairs: { total: number; components: Record<string, number | null> }[];
-      unmatched_mentors: string[];
+      unmatched_bigs: string[];
       average_score: number;
     };
 
     expect(result.pairs).toHaveLength(6);
-    expect(result.unmatched_mentors).toHaveLength(0);
+    expect(result.unmatched_bigs).toHaveLength(0);
     for (const pair of result.pairs) {
       expect(pair.total).toBeGreaterThan(0);
       expect(pair.total).toBeLessThanOrEqual(1);
@@ -377,26 +407,26 @@ describe("matching, override and publishing", () => {
     const before = await json(
       await matchRoute(req("/api/admin/match", { round_id: roundId, persist: false })),
     );
-    const firstPair = (before.result as { pairs: { mentor_id: string; mentee_id: string }[] })
+    const firstPair = (before.result as { pairs: { big_id: string; little_id: string }[] })
       .pairs[0];
 
     await blockedRoute(
       req("/api/admin/blocked", {
         action: "add",
         round_id: roundId,
-        participant_a: firstPair.mentor_id,
-        participant_b: firstPair.mentee_id,
+        participant_a: firstPair.big_id,
+        participant_b: firstPair.little_id,
       }),
     );
 
     const after = await json(
       await matchRoute(req("/api/admin/match", { round_id: roundId, persist: false })),
     );
-    const pairs = (after.result as { pairs: { mentor_id: string; mentee_id: string; blocked: boolean }[] })
+    const pairs = (after.result as { pairs: { big_id: string; little_id: string; blocked: boolean }[] })
       .pairs;
     expect(
       pairs.some(
-        (p) => p.mentor_id === firstPair.mentor_id && p.mentee_id === firstPair.mentee_id,
+        (p) => p.big_id === firstPair.big_id && p.little_id === firstPair.little_id,
       ),
     ).toBe(false);
     expect(pairs.every((p) => !p.blocked)).toBe(true);
@@ -470,9 +500,9 @@ describe("CSV export", () => {
     );
     const text = await res.text();
     const lines = text.split("\r\n");
-    expect(lines[0]).toBe("mentor_name,mentor_email,mentee_name,mentee_email,score");
+    expect(lines[0]).toBe("big_name,big_email,little_name,little_email,score");
     expect(lines).toHaveLength(7);
-    expect(lines[1]).toMatch(/Mentor,.+@example\.com,.+Mentee,.+@example\.com,0\.\d{4}/);
+    expect(lines[1]).toMatch(/Big,.+@example\.com,.+Little,.+@example\.com,0\.\d{4}/);
   });
 
   it("says so plainly when nothing is published yet", async () => {

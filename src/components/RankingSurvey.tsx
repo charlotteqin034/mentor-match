@@ -21,7 +21,7 @@ export function RankingSurvey({
 }: {
   token: string;
   name: string;
-  role: "mentor" | "mentee";
+  role: "big" | "little";
   cards: RankableCard[];
   required: number;
   initialRanking: string[];
@@ -120,13 +120,13 @@ export function RankingSurvey({
   }
 
   const enough = shortlist.length >= required;
-  const otherSide = role === "mentor" ? "mentees" : "mentors";
+  const otherSide = role === "big" ? "littles" : "bigs";
 
   return (
     <div className="mx-auto max-w-7xl px-6 pb-24 pt-10">
       <header className="max-w-prose">
         <p className="text-xs font-semibold uppercase tracking-widest text-accent">
-          {role === "mentor" ? "Mentor" : "Mentee"} · ranking round
+          {role === "big" ? "Big" : "Little"} · ranking round
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">
           Which of these {otherSide} would you want, {name.split(" ")[0]}?

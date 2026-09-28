@@ -38,8 +38,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const { mentors, mentees, blocked, participants } = input;
-  const result = runMatching(mentors, mentees, weights, blocked);
+  const { bigs, littles, blocked, participants } = input;
+  const result = runMatching(bigs, littles, weights, blocked);
 
   let runId: string | null = null;
   if (body.persist) {

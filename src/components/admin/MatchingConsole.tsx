@@ -19,7 +19,7 @@ type Person = {
   id: string;
   name: string;
   email: string;
-  role: "mentor" | "mentee";
+  role: "big" | "little";
   display_number: number | null;
   trait_completed: boolean;
   ranking_completed: boolean;
@@ -33,7 +33,7 @@ type MatchResponse = {
   people: Person[];
 };
 
-type SortKey = "score" | "mentor" | "mentee" | "fit";
+type SortKey = "score" | "big" | "little" | "fit";
 
 export function MatchingConsole({
   roundId,
@@ -128,12 +128,12 @@ export function MatchingConsole({
     const name = (id: string) => people.get(id)?.name ?? "";
     indices.sort((a, b) => {
       switch (sort) {
-        case "mentor":
-          return name(pairs[a].mentor_id).localeCompare(name(pairs[b].mentor_id));
-        case "mentee":
-          return name(pairs[a].mentee_id).localeCompare(name(pairs[b].mentee_id));
+        case "big":
+          return name(pairs[a].big_id).localeCompare(name(pairs[b].big_id));
+        case "little":
+          return name(pairs[a].little_id).localeCompare(name(pairs[b].little_id));
         case "fit":
-          return pairs[b].mentor_rank_of_mentee - pairs[a].mentor_rank_of_mentee;
+          return pairs[b].big_rank_of_little - pairs[a].big_rank_of_little;
         default:
           return pairs[a].total - pairs[b].total; // weakest first — those need the eyeballs
       }
@@ -219,7 +219,7 @@ export function MatchingConsole({
           <div className="card p-8 text-sm text-muted">
             <p className="font-medium text-ink">Nothing run yet.</p>
             <p className="mt-2">
-              Hit <strong>Run matching</strong> to build the full mentor × mentee matrix and
+              Hit <strong>Run matching</strong> to build the full big × little matrix and
               solve it. Afterwards the sliders re-score live, so you can watch pairs move before
               committing to anything.
             </p>
@@ -236,12 +236,12 @@ export function MatchingConsole({
               />
             </div>
 
-            {(data.result.unmatched_mentors.length > 0 ||
-              data.result.unmatched_mentees.length > 0) && (
+            {(data.result.unmatched_bigs.length > 0 ||
+              data.result.unmatched_littles.length > 0) && (
               <div className="card border-warn/40 bg-warn-soft p-4 text-sm text-warn">
                 <p className="font-semibold">Left unmatched</p>
                 <p className="mt-1">
-                  {[...data.result.unmatched_mentors, ...data.result.unmatched_mentees]
+                  {[...data.result.unmatched_bigs, ...data.result.unmatched_littles]
                     .map((id) => people.get(id)?.name ?? id)
                     .join(", ")}{" "}
                   — the cohorts aren&apos;t the same size, so these people have nobody to pair
@@ -296,8 +296,8 @@ export function MatchingConsole({
                   >
                     <option value="score">Weakest pairs first</option>
                     <option value="fit">Worst fit rank first</option>
-                    <option value="mentor">Mentor name</option>
-                    <option value="mentee">Mentee name</option>
+                    <option value="big">Big name</option>
+                    <option value="little">Little name</option>
                   </select>
                 </label>
               </div>
@@ -306,11 +306,11 @@ export function MatchingConsole({
                 <tbody>
                   {order.map((index) => {
                     const pair = pairs[index];
-                    const mentor = people.get(pair.mentor_id);
-                    const mentee = people.get(pair.mentee_id);
+                    const big = people.get(pair.big_id);
+                    const little = people.get(pair.little_id);
                     const isOpen = expanded === index;
                     return (
-                      <tr key={`${pair.mentor_id}-${pair.mentee_id}`} className="align-top">
+                      <tr key={`${pair.big_id}-${pair.little_id}`} className="align-top">
                         <td colSpan={5} className="border-b border-line/60 px-4 py-2.5">
                           <div className="flex flex-wrap items-center gap-3">
                             <button
@@ -318,9 +318,9 @@ export function MatchingConsole({
                               className="flex flex-1 items-center gap-3 text-left"
                               onClick={() => setExpanded(isOpen ? null : index)}
                             >
-                              <PairName person={mentor} />
+                              <PairName person={big} />
                               <span className="text-faint">+</span>
-                              <PairName person={mentee} />
+                              <PairName person={little} />
                             </button>
 
                             <span className="w-40">
@@ -331,9 +331,9 @@ export function MatchingConsole({
                             </span>
                             <span
                               className="w-24 text-right text-xs tabular-nums text-muted"
-                              title="Where this mentee ranked among all mentees for this mentor"
+                              title="Where this little ranked among all littles for this big"
                             >
-                              #{pair.mentor_rank_of_mentee} / {data.result.mentee_ids.length}
+                              #{pair.big_rank_of_little} / {data.result.little_ids.length}
                             </span>
                             <button
                               type="button"
@@ -377,15 +377,15 @@ export function MatchingConsole({
                                 );
                               })}
                               <div className="text-xs text-muted sm:col-span-2 lg:col-span-3">
-                                {mentor?.name} was this mentee&apos;s #
-                                {pair.mentee_rank_of_mentor} option of{" "}
-                                {data.result.mentor_ids.length}.
-                                {(!mentor?.ranking_completed || !mentee?.ranking_completed) && (
+                                {big?.name} was this little&apos;s #
+                                {pair.little_rank_of_big} option of{" "}
+                                {data.result.big_ids.length}.
+                                {(!big?.ranking_completed || !little?.ranking_completed) && (
                                   <>
                                     {" "}
                                     {[
-                                      !mentor?.ranking_completed ? mentor?.name : null,
-                                      !mentee?.ranking_completed ? mentee?.name : null,
+                                      !big?.ranking_completed ? big?.name : null,
+                                      !little?.ranking_completed ? little?.name : null,
                                     ]
                                       .filter(Boolean)
                                       .join(" and ")}{" "}

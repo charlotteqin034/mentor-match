@@ -154,10 +154,10 @@ export function RunHistory({
                   {[...run.results]
                     .sort((a, b) => a.total - b.total)
                     .map((r) => (
-                      <tr key={`${r.mentor_id}-${r.mentee_id}`} className="border-t border-line/60">
-                        <td className="py-1.5 pr-3">{byId.get(r.mentor_id)?.name ?? "(removed)"}</td>
+                      <tr key={`${r.big_id}-${r.little_id}`} className="border-t border-line/60">
+                        <td className="py-1.5 pr-3">{byId.get(r.big_id)?.name ?? "(removed)"}</td>
                         <td className="py-1.5 pr-3 text-faint">+</td>
-                        <td className="py-1.5 pr-3">{byId.get(r.mentee_id)?.name ?? "(removed)"}</td>
+                        <td className="py-1.5 pr-3">{byId.get(r.little_id)?.name ?? "(removed)"}</td>
                         <td className="py-1.5 text-right tabular-nums">{r.total.toFixed(3)}</td>
                       </tr>
                     ))}

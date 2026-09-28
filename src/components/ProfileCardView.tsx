@@ -71,10 +71,12 @@ export function ProfileCardView({
           <dt className="label">Ideal relationship</dt>
           <dd className="mt-0.5 leading-snug">{card.ideal_relationship}</dd>
         </div>
-        <div>
-          <dt className="label">Hoping for</dt>
-          <dd className="mt-0.5 leading-snug text-muted">{card.values.join(" · ")}</dd>
-        </div>
+        {card.values.length > 0 && (
+          <div>
+            <dt className="label">Hoping for</dt>
+            <dd className="mt-0.5 leading-snug text-muted">{card.values.join(" · ")}</dd>
+          </div>
+        )}
       </dl>
 
       <div className="mt-auto space-y-2 pt-4">

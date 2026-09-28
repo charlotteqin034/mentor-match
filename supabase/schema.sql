@@ -1,4 +1,4 @@
--- Mentor–Mentee Matching Platform — schema
+-- Big–Little Matching Platform — schema
 -- Run this in the Supabase SQL editor (or `supabase db push`) before first use.
 
 -- ---------------------------------------------------------------------------
@@ -19,7 +19,7 @@ create table if not exists rounds (
 create table if not exists participants (
   id uuid primary key default gen_random_uuid(),
   round_id uuid references rounds(id) on delete cascade,
-  role text not null check (role in ('mentor','mentee')),
+  role text not null check (role in ('big','little')),
   name text not null,
   email text not null,
   token text not null unique,          -- random 32-char, used in magic links
@@ -84,7 +84,7 @@ create table if not exists match_runs (
   id uuid primary key default gen_random_uuid(),
   round_id uuid references rounds(id) on delete cascade,
   weights jsonb not null,              -- snapshot of the config used
-  results jsonb not null,              -- [{ mentor_id, mentee_id, total, components:{...} }]
+  results jsonb not null,              -- [{ big_id, little_id, total, components:{...} }]
   total_score numeric,
   created_at timestamptz default now()
 );

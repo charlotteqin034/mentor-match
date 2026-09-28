@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Mentor–Mentee Matching",
+  title: "Big–Little Matching",
   description: "Trait survey, anonymous profile ranking, and optimal pairing for one club, one round.",
 };
 

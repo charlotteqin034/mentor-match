@@ -23,6 +23,7 @@ import {
   SCALE_POINTS,
   SCALE_QUESTIONS,
   SECTIONS,
+  questionsFor,
   questionsInSection,
   type MultiQuestion,
   type ScaleQuestion,
@@ -72,6 +73,14 @@ describe("the question bank", () => {
   it("keeps 21 questions feeding trait similarity", () => {
     const similarity = SCALE_QUESTIONS.filter((q) => q.mode === "similarity");
     expect(similarity).toHaveLength(21);
+  });
+
+  it("asks only littles what they want out of it", () => {
+    expect(QUESTIONS_BY_ID.q26.audience).toBe("little");
+    expect(questionsFor("little").map((q) => q.id)).toContain("q26");
+    expect(questionsFor("big").map((q) => q.id)).not.toContain("q26");
+    // One question apart, both sides answer the same survey.
+    expect(questionsFor("big")).toHaveLength(questionsFor("little").length - 1);
   });
 
   it("offers the agreed set of things to want out of this", () => {
@@ -219,6 +228,13 @@ describe("§8d values overlap", () => {
     const a = answersAt(4, { q26: ["network", "social"] });
     const b = answersAt(4, { q26: ["network", "career_clarity"] });
     expect(valuesOverlap(a, b)).toBeCloseTo(1 / 3, 10);
+  });
+
+  it("is never computable across a pair, now that only littles answer q26", () => {
+    const big = answersAt(3);
+    delete big.q26; // what a big's stored answers actually look like
+    const little = answersAt(3);
+    expect(valuesOverlap(big, little)).toBeNull();
   });
 
   it("returns null when either side didn't answer", () => {

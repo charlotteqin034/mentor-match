@@ -1,6 +1,6 @@
-# Mentor–Mentee Matching
+# Big–Little Matching
 
-Pairs a club's mentors with its mentees, one round per semester. Three stages for
+Pairs a club's bigs with its littles, one round per semester. Three stages for
 participants, one console for whoever's organising.
 
 Built for ~25 + ~25 people. The scale is trivial; the point is that **every
@@ -33,6 +33,13 @@ No paid services anywhere.
   so a leaked anon key reads nothing.
 
 ---
+
+## Roles
+
+The two sides are **bigs** and **littles**, stored in `participants.role` as
+`'big'` and `'little'`. If you're upgrading a database created before that
+rename, run `supabase/migrations/001-mentor-mentee-to-big-little.sql` in the SQL
+editor *before* deploying — the old CHECK constraint rejects the new values.
 
 ## Setup
 
@@ -109,10 +116,15 @@ are directly comparable. Default weights:
 |---|---|---|
 | **Trait similarity** | 21 scale questions | `1 − |a − b| / 4`, weighted mean |
 | **Cross-preference** | q10 → q15 | The scales run opposite ways, so the hoped-for partner answer is `8 − mine`; both directions, averaged |
-| **Closeness & logistics** | q23, q24, q25 | Same gap formula, own component, q23 weighted double — a light-touch mentor with a close-mentorship mentee is the most damaging mismatch there is |
-| **Values overlap** | q26 | Jaccard index over the selected sets |
+| **Closeness & logistics** | q23, q24, q25 | Same gap formula, own component, q23 weighted double — a light-touch big with a close-bigship little is the most damaging mismatch there is |
+| **Values overlap** | q26 | Jaccard index over the selected sets. Only littles are asked q26, so a pair never has both sides — this component is always excluded and its weight redistributes. It exists for the profile card |
 | **Open text** | q27 + q28 | Cosine similarity of embeddings. Excluded entirely when disabled |
 | **Ranking** | ranking round | `(K − r + 1) / K`; mutual → average, one-sided → half credit, neither → 0 |
+
+A question can carry `audience: "big" | "little"` to restrict it to one side.
+`q26` does. A one-sided question can't produce a similarity score — there's
+nothing to compare against — so it feeds the profile card rather than the match,
+and its component is excluded from every pair.
 
 Every scale question runs 1–5. That range lives in `SCALE_MIN`/`SCALE_MAX` in
 `src/lib/questions.ts` and everything else derives from it — the radio buttons,
@@ -144,7 +156,7 @@ Per-question weights are also supported: add `weight` to any question in
 ### Manual override
 
 The algorithm is a strong starting point, not gospel. On the Matching page,
-*Swap* on two rows exchanges their mentees and shows the score delta immediately.
+*Swap* on two rows exchanges their littles and shows the score delta immediately.
 Save the result as a new run to publish it.
 
 ---

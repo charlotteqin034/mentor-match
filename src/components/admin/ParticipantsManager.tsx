@@ -22,10 +22,10 @@ export function ParticipantsManager({
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"mentor" | "mentee">("mentee");
+  const [role, setRole] = useState<"big" | "little">("little");
 
   const [bulkText, setBulkText] = useState("");
-  const [bulkRole, setBulkRole] = useState<"mentor" | "mentee">("mentee");
+  const [bulkRole, setBulkRole] = useState<"big" | "little">("little");
 
   async function run(body: Record<string, unknown>, after?: () => void) {
     setBusy(true);
@@ -120,10 +120,10 @@ export function ParticipantsManager({
             <select
               className="input w-auto"
               value={role}
-              onChange={(e) => setRole(e.target.value as "mentor" | "mentee")}
+              onChange={(e) => setRole(e.target.value as "big" | "little")}
             >
-              <option value="mentee">Mentee</option>
-              <option value="mentor">Mentor</option>
+              <option value="little">Little</option>
+              <option value="big">Big</option>
             </select>
             <button className="btn btn-primary" disabled={busy}>
               Add
@@ -143,7 +143,7 @@ export function ParticipantsManager({
           <h2 className="text-sm font-semibold">Paste a list</h2>
           <p className="text-xs text-muted">
             One per line: <code>Name, email</code> — or{" "}
-            <code>Name, email, mentor</code> to mix roles in one paste. Tabs work too, so you
+            <code>Name, email, big</code> to mix roles in one paste. Tabs work too, so you
             can paste straight from a spreadsheet.
           </p>
           <textarea
@@ -156,10 +156,10 @@ export function ParticipantsManager({
             <select
               className="input w-auto"
               value={bulkRole}
-              onChange={(e) => setBulkRole(e.target.value as "mentor" | "mentee")}
+              onChange={(e) => setBulkRole(e.target.value as "big" | "little")}
             >
-              <option value="mentee">Default: mentee</option>
-              <option value="mentor">Default: mentor</option>
+              <option value="little">Default: little</option>
+              <option value="big">Default: big</option>
             </select>
             <button className="btn btn-primary" disabled={busy || !bulkText.trim()}>
               Add all
@@ -218,8 +218,8 @@ export function ParticipantsManager({
                           })
                         }
                       >
-                        <option value="mentee">mentee</option>
-                        <option value="mentor">mentor</option>
+                        <option value="little">little</option>
+                        <option value="big">big</option>
                       </select>
                     </td>
                     <td className="px-4 py-2">

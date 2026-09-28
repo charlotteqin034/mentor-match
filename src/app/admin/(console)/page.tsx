@@ -45,8 +45,8 @@ export default async function OverviewPage() {
   }
 
   const participants = await getParticipants(round.id);
-  const mentors = participants.filter((p) => p.role === "mentor");
-  const mentees = participants.filter((p) => p.role === "mentee");
+  const bigs = participants.filter((p) => p.role === "big");
+  const littles = participants.filter((p) => p.role === "little");
   const cards = await getProfileCards(participants.map((p) => p.id));
 
   const trait = completion(participants, "trait_completed_at");
@@ -61,7 +61,7 @@ export default async function OverviewPage() {
         <Stat
           label="Participants"
           value={String(participants.length)}
-          sub={`${mentors.length} mentors · ${mentees.length} mentees`}
+          sub={`${bigs.length} bigs · ${littles.length} littles`}
         />
         <Stat
           label="Trait survey"
@@ -80,11 +80,11 @@ export default async function OverviewPage() {
         />
       </div>
 
-      {mentors.length !== mentees.length && participants.length > 0 && (
+      {bigs.length !== littles.length && participants.length > 0 && (
         <div className="card border-warn/40 bg-warn-soft p-4 text-sm text-warn">
-          There are {mentors.length} mentors and {mentees.length} mentees. Matching will still
-          run — {Math.abs(mentors.length - mentees.length)}{" "}
-          {mentors.length > mentees.length ? "mentors" : "mentees"} will be reported as
+          There are {bigs.length} bigs and {littles.length} littles. Matching will still
+          run — {Math.abs(bigs.length - littles.length)}{" "}
+          {bigs.length > littles.length ? "bigs" : "littles"} will be reported as
           unmatched rather than paired badly.
         </div>
       )}

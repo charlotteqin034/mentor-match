@@ -5,6 +5,8 @@
  * all read from this array. Nothing about a question is hardcoded in JSX.
  */
 
+export type Role = "big" | "little";
+
 export type SectionId = "about" | "how" | "looking";
 
 export const SECTIONS: { id: SectionId; title: string; blurb?: string }[] = [
@@ -54,6 +56,13 @@ type Base = {
   mode: ScoringMode;
   /** Relative weight inside its own component. Default 1. */
   weight?: number;
+  /**
+   * Restricts the question to one side of the pairing. Absent means everyone
+   * answers it. A question only one side answers can't produce a similarity
+   * score — there's nothing to compare against — so it feeds the profile card
+   * rather than the match.
+   */
+  audience?: Role;
 };
 
 export type ScaleQuestion = Base & {
@@ -137,7 +146,7 @@ export const QUESTIONS: Question[] = [
   scale(
     "q10",
     "about",
-    "I'd rather have a mentor/mentee who…",
+    "I'd rather have a big/little who…",
     "meticulously plans",
     "goes with the flow",
     { low: "Wants a partner who plans", high: "Wants a partner who improvises" },
@@ -196,7 +205,7 @@ export const QUESTIONS: Question[] = [
     high: "Questions the rules",
   }),
 
-  // Deliberately last in this section, despite the ids. Opening a mentorship
+  // Deliberately last in this section, despite the ids. Opening a bigship
   // survey by asking about drinking and smoking sets the wrong tone, and these
   // read far better once someone is warmed up. The ids stay put because they
   // key stored answers — array order is what the survey renders by.
@@ -213,10 +222,10 @@ export const QUESTIONS: Question[] = [
   scale(
     "q23",
     "how",
-    "I want a mentor/mentee relationship that is…",
+    "I want a big/little relationship that is…",
     "light-touch, occasional",
     "close and frequent",
-    { low: "Wants light-touch mentorship", high: "Wants close, frequent mentorship" },
+    { low: "Wants light-touch bigship", high: "Wants close, frequent bigship" },
     { mode: "gap", weight: 2 }, // double q24/q25 within the closeness component
   ),
   scale(
@@ -245,6 +254,7 @@ export const QUESTIONS: Question[] = [
     section: "looking",
     text: "What are you hoping to get out of this? Pick 2–3.",
     mode: "jaccard",
+    audience: "little",
     min: 2,
     max: 3,
     allowOther: true,
@@ -270,7 +280,7 @@ export const QUESTIONS: Question[] = [
     kind: "text",
     id: "q28",
     section: "looking",
-    text: "In one sentence, describe your ideal mentor/mentee relationship.",
+    text: "In one sentence, describe your ideal big/little relationship.",
     hint: "One sentence. Also shown on your profile card verbatim.",
     mode: "text",
     placeholder: "e.g. Someone I can text a half-formed question at 11pm.",
@@ -287,5 +297,13 @@ export const SCALE_QUESTIONS = QUESTIONS.filter(
   (q): q is ScaleQuestion => q.kind === "scale",
 );
 
-export const questionsInSection = (section: SectionId) =>
-  QUESTIONS.filter((q) => q.section === section);
+/** Everyone sees an unrestricted question; a restricted one only its audience. */
+export const appliesTo = (question: Question, role?: Role): boolean =>
+  !question.audience || !role || question.audience === role;
+
+/** The questions one person actually answers. No role = the whole bank. */
+export const questionsFor = (role?: Role): Question[] =>
+  QUESTIONS.filter((q) => appliesTo(q, role));
+
+export const questionsInSection = (section: SectionId, role?: Role) =>
+  questionsFor(role).filter((q) => q.section === section);

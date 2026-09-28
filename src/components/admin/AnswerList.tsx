@@ -1,6 +1,12 @@
 "use client";
 
-import { QUESTIONS, SCALE_MIDPOINT, SCALE_POINTS, type Question } from "@/lib/questions";
+import {
+  SCALE_MIDPOINT,
+  SCALE_POINTS,
+  questionsFor,
+  type Question,
+  type Role,
+} from "@/lib/questions";
 import { valueLabel } from "@/lib/profile-cards";
 
 function renderAnswer(question: Question, value: unknown): React.ReactNode {
@@ -44,10 +50,16 @@ function renderAnswer(question: Question, value: unknown): React.ReactNode {
   }
 }
 
-export function AnswerList({ answers }: { answers: Record<string, unknown> }) {
+export function AnswerList({
+  answers,
+  role,
+}: {
+  answers: Record<string, unknown>;
+  role?: Role;
+}) {
   return (
     <dl className="divide-y divide-line/60 text-sm">
-      {QUESTIONS.map((q) => (
+      {questionsFor(role).map((q) => (
         <div key={q.id} className="grid gap-1 py-1.5 sm:grid-cols-[1.5rem_1fr_1.4fr] sm:gap-3">
           <dt className="text-xs text-faint">{q.id}</dt>
           <dd className="text-muted">{q.text}</dd>

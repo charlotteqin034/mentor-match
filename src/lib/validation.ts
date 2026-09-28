@@ -5,7 +5,7 @@
  * question, and the route handler runs it again before writing anything.
  */
 
-import { QUESTIONS, SCALE_MAX, SCALE_MIN, type Question } from "./questions";
+import { SCALE_MAX, SCALE_MIN, questionsFor, type Question, type Role } from "./questions";
 import type { Answers } from "./scoring";
 
 export const OTHER_PREFIX = "other:";
@@ -47,12 +47,16 @@ function checkOne(q: Question, raw: unknown): { error?: string; value?: unknown 
 /** Validates a whole submission. Returns cleaned answers or per-question errors. */
 export function validateAnswers(
   input: unknown,
+  role?: Role,
 ): { ok: true; answers: Answers } | { ok: false; errors: Errors } {
   const raw = (input ?? {}) as Record<string, unknown>;
   const errors: Errors = {};
   const answers: Answers = {};
 
-  for (const q of QUESTIONS) {
+  // Only the questions this person is actually asked. Anything else in the
+  // payload is dropped rather than validated — that's how a question the other
+  // side answers, or one retired from the bank, stays out of stored answers.
+  for (const q of questionsFor(role)) {
     const { error, value } = checkOne(q, raw[q.id]);
     if (error) errors[q.id] = error;
     else answers[q.id] = value;
@@ -62,6 +66,8 @@ export function validateAnswers(
 }
 
 /** Ids of unanswered/invalid questions, in survey order — used to scroll to the first. */
-export function missingQuestionIds(raw: Record<string, unknown>): string[] {
-  return QUESTIONS.filter((q) => Boolean(checkOne(q, raw[q.id]).error)).map((q) => q.id);
+export function missingQuestionIds(raw: Record<string, unknown>, role?: Role): string[] {
+  return questionsFor(role)
+    .filter((q) => Boolean(checkOne(q, raw[q.id]).error))
+    .map((q) => q.id);
 }

@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "The trait survey is closed." }, { status: 409 });
   }
 
-  const validated = validateAnswers(body.answers);
+  const validated = validateAnswers(body.answers, participant.role);
   if (!validated.ok) {
     return NextResponse.json(
       { error: "Some answers are missing.", errors: validated.errors },

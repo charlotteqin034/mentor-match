@@ -3,13 +3,13 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/supabase";
 import { generateToken } from "@/lib/tokens";
 
-type Row = { name: string; email: string; role: "mentor" | "mentee" };
+type Row = { name: string; email: string; role: "big" | "little" };
 
 /**
  * Parses pasted rows. Accepts comma or tab separated `name, email, role`,
  * and falls back to a `role` supplied for the whole paste when a line omits it.
  */
-export function parseBulk(text: string, defaultRole?: "mentor" | "mentee"): {
+export function parseBulk(text: string, defaultRole?: "big" | "little"): {
   rows: Row[];
   problems: string[];
 } {
@@ -21,7 +21,7 @@ export function parseBulk(text: string, defaultRole?: "mentor" | "mentee"): {
     if (!trimmed) continue;
     const parts = trimmed.split(/\t|,/).map((p) => p.trim());
     const [name, email, roleRaw] = parts;
-    const role = (roleRaw?.toLowerCase() as "mentor" | "mentee") || defaultRole;
+    const role = (roleRaw?.toLowerCase() as "big" | "little") || defaultRole;
 
     if (!name || !email) {
       problems.push(`Line ${i + 1}: need at least a name and an email.`);
@@ -31,8 +31,8 @@ export function parseBulk(text: string, defaultRole?: "mentor" | "mentee"): {
       problems.push(`Line ${i + 1}: "${email}" doesn't look like an email.`);
       continue;
     }
-    if (role !== "mentor" && role !== "mentee") {
-      problems.push(`Line ${i + 1}: role must be "mentor" or "mentee".`);
+    if (role !== "big" && role !== "little") {
+      problems.push(`Line ${i + 1}: role must be "big" or "little".`);
       continue;
     }
     rows.push({ name, email, role });
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     participant_id?: string;
     name?: string;
     email?: string;
-    role?: "mentor" | "mentee";
+    role?: "big" | "little";
     text?: string;
   };
 
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "set_role") {
-    if (!body.participant_id || (body.role !== "mentor" && body.role !== "mentee")) {
+    if (!body.participant_id || (body.role !== "big" && body.role !== "little")) {
       return NextResponse.json({ error: "Missing id or role." }, { status: 400 });
     }
     const { error } = await client

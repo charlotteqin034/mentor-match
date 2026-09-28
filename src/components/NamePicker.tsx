@@ -7,7 +7,7 @@ import { errorMessage, post } from "@/lib/client";
 export type PickerPerson = {
   id: string;
   name: string;
-  role: "mentor" | "mentee";
+  role: "big" | "little";
   done: boolean;
 };
 
@@ -25,8 +25,8 @@ export function NamePicker({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const mentors = people.filter((p) => p.role === "mentor");
-  const mentees = people.filter((p) => p.role === "mentee");
+  const bigs = people.filter((p) => p.role === "big");
+  const littles = people.filter((p) => p.role === "little");
 
   async function go(participantId: string) {
     setBusy(true);
@@ -101,8 +101,8 @@ export function NamePicker({
         disabled={busy}
       >
         <option value="">Choose your name…</option>
-        {group("Mentors", mentors)}
-        {group("Mentees", mentees)}
+        {group("Bigs", bigs)}
+        {group("Littles", littles)}
       </select>
 
       <button type="submit" className="btn btn-primary mt-4 w-full" disabled={!selected || busy}>

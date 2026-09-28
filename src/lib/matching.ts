@@ -1,7 +1,7 @@
 /**
  * Stage 4 — the matching run (§9).
  *
- * Builds the full mentor × mentee score matrix (keeping every component
+ * Builds the full big × little score matrix (keeping every component
  * breakdown, because the organiser needs to see *why* a pair scored what it
  * did), then solves it as a linear sum assignment problem with the Hungarian
  * algorithm.
@@ -29,7 +29,7 @@ export type MatchParticipant = {
   id: string;
   name: string;
   email: string;
-  role: "mentor" | "mentee";
+  role: "big" | "little";
   display_number: number | null;
   answers: Answers | null;
   embedding?: number[] | null;
@@ -44,8 +44,8 @@ export type MatrixCell = {
 };
 
 export type MatchedPair = {
-  mentor_id: string;
-  mentee_id: string;
+  big_id: string;
+  little_id: string;
   total: number;
   components: Components;
   /**
@@ -55,21 +55,21 @@ export type MatchedPair = {
    */
   applied: Record<WeightKey, number>;
   blocked: boolean;
-  /** 1 = this mentee was this mentor's highest-scoring option of all mentees. */
-  mentor_rank_of_mentee: number;
-  /** 1 = this mentor was this mentee's highest-scoring option of all mentors. */
-  mentee_rank_of_mentor: number;
+  /** 1 = this little was this big's highest-scoring option of all littles. */
+  big_rank_of_little: number;
+  /** 1 = this big was this little's highest-scoring option of all bigs. */
+  little_rank_of_big: number;
 };
 
 export type MatchResult = {
   pairs: MatchedPair[];
-  unmatched_mentors: string[];
-  unmatched_mentees: string[];
+  unmatched_bigs: string[];
+  unmatched_littles: string[];
   total_score: number;
   average_score: number;
   matrix: MatrixCell[][];
-  mentor_ids: string[];
-  mentee_ids: string[];
+  big_ids: string[];
+  little_ids: string[];
 };
 
 const blockKey = (a: string, b: string) => [a, b].sort().join("|");
@@ -86,15 +86,15 @@ const toSide = (p: MatchParticipant): Side => ({
 });
 
 export function buildScoreMatrix(
-  mentors: MatchParticipant[],
-  mentees: MatchParticipant[],
+  bigs: MatchParticipant[],
+  littles: MatchParticipant[],
   weights: Weights = DEFAULT_WEIGHTS,
   blocked: Set<string> = new Set(),
 ): MatrixCell[][] {
-  return mentors.map((mentor) =>
-    mentees.map((mentee) => {
-      const isBlocked = blocked.has(blockKey(mentor.id, mentee.id));
-      const { total, components, applied } = scorePair(toSide(mentor), toSide(mentee), weights);
+  return bigs.map((big) =>
+    littles.map((little) => {
+      const isBlocked = blocked.has(blockKey(big.id, little.id));
+      const { total, components, applied } = scorePair(toSide(big), toSide(little), weights);
       return {
         total: isBlocked ? BLOCKED_SCORE : total,
         components,
@@ -111,34 +111,34 @@ export function rankWithin(values: number[], value: number): number {
 }
 
 export function runMatching(
-  mentors: MatchParticipant[],
-  mentees: MatchParticipant[],
+  bigs: MatchParticipant[],
+  littles: MatchParticipant[],
   weights: Weights = DEFAULT_WEIGHTS,
   blockedPairs: { participant_a: string; participant_b: string }[] = [],
 ): MatchResult {
   const blocked = blockedSet(blockedPairs);
-  const matrix = buildScoreMatrix(mentors, mentees, weights, blocked);
+  const matrix = buildScoreMatrix(bigs, littles, weights, blocked);
 
   const empty: MatchResult = {
     pairs: [],
-    unmatched_mentors: mentors.map((m) => m.id),
-    unmatched_mentees: mentees.map((m) => m.id),
+    unmatched_bigs: bigs.map((m) => m.id),
+    unmatched_littles: littles.map((m) => m.id),
     total_score: 0,
     average_score: 0,
     matrix,
-    mentor_ids: mentors.map((m) => m.id),
-    mentee_ids: mentees.map((m) => m.id),
+    big_ids: bigs.map((m) => m.id),
+    little_ids: littles.map((m) => m.id),
   };
-  if (mentors.length === 0 || mentees.length === 0) return empty;
+  if (bigs.length === 0 || littles.length === 0) return empty;
 
   // Pad to a square matrix with dummy rows/columns scoring 0, so unequal
   // cohorts produce explicit "unmatched" people instead of an error.
-  const size = Math.max(mentors.length, mentees.length);
+  const size = Math.max(bigs.length, littles.length);
   const cost: number[][] = [];
   for (let r = 0; r < size; r++) {
     const row: number[] = [];
     for (let c = 0; c < size; c++) {
-      const real = r < mentors.length && c < mentees.length;
+      const real = r < bigs.length && c < littles.length;
       const score = real ? matrix[r][c].total : 0;
       // Hungarian minimises, so cost is the negated score.
       row.push(-score);
@@ -148,31 +148,31 @@ export function runMatching(
 
   const assignment = munkres(cost.map((row) => [...row]));
 
-  const columnScores: number[][] = mentees.map((_, c) =>
-    mentors.map((_, r) => matrix[r][c].total),
+  const columnScores: number[][] = littles.map((_, c) =>
+    bigs.map((_, r) => matrix[r][c].total),
   );
 
   const pairs: MatchedPair[] = [];
-  const matchedMentors = new Set<number>();
-  const matchedMentees = new Set<number>();
+  const matchedBigs = new Set<number>();
+  const matchedLittles = new Set<number>();
 
   for (const [r, c] of assignment) {
-    if (r >= mentors.length || c >= mentees.length) continue; // padding
-    matchedMentors.add(r);
-    matchedMentees.add(c);
+    if (r >= bigs.length || c >= littles.length) continue; // padding
+    matchedBigs.add(r);
+    matchedLittles.add(c);
     const cell = matrix[r][c];
     pairs.push({
-      mentor_id: mentors[r].id,
-      mentee_id: mentees[c].id,
+      big_id: bigs[r].id,
+      little_id: littles[c].id,
       total: cell.total,
       components: cell.components,
       applied: cell.applied,
       blocked: cell.blocked,
-      mentor_rank_of_mentee: rankWithin(
+      big_rank_of_little: rankWithin(
         matrix[r].map((x) => x.total),
         cell.total,
       ),
-      mentee_rank_of_mentor: rankWithin(columnScores[c], cell.total),
+      little_rank_of_big: rankWithin(columnScores[c], cell.total),
     });
   }
 
@@ -180,12 +180,12 @@ export function runMatching(
 
   return {
     pairs,
-    unmatched_mentors: mentors.filter((_, i) => !matchedMentors.has(i)).map((m) => m.id),
-    unmatched_mentees: mentees.filter((_, i) => !matchedMentees.has(i)).map((m) => m.id),
+    unmatched_bigs: bigs.filter((_, i) => !matchedBigs.has(i)).map((m) => m.id),
+    unmatched_littles: littles.filter((_, i) => !matchedLittles.has(i)).map((m) => m.id),
     total_score: totalScore,
     average_score: pairs.length ? totalScore / pairs.length : 0,
     matrix,
-    mentor_ids: mentors.map((m) => m.id),
-    mentee_ids: mentees.map((m) => m.id),
+    big_ids: bigs.map((m) => m.id),
+    little_ids: littles.map((m) => m.id),
   };
 }

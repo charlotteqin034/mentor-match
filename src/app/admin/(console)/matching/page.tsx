@@ -25,7 +25,7 @@ export default async function MatchingPage() {
       <div>
         <h1 className="text-lg font-semibold tracking-tight">Matching</h1>
         <p className="mt-1 max-w-prose text-sm text-muted">
-          Every cell of the mentor × mentee matrix is scored from six components, then solved as
+          Every cell of the big × little matrix is scored from six components, then solved as
           a linear assignment problem — so this is the arrangement with the highest total score,
           not a greedy pass. Sort by the weakest pairs and look at those first.
         </p>

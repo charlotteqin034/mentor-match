@@ -42,7 +42,7 @@ export type Round = {
 export type Participant = {
   id: string;
   round_id: string;
-  role: "mentor" | "mentee";
+  role: "big" | "little";
   name: string;
   email: string;
   token: string;
@@ -81,14 +81,14 @@ export type BlockedPair = {
 };
 
 export type MatchRunResultRow = {
-  mentor_id: string;
-  mentee_id: string;
+  big_id: string;
+  little_id: string;
   total: number;
   components: Components;
   applied: Record<WeightKey, number>;
   blocked: boolean;
-  mentor_rank_of_mentee: number;
-  mentee_rank_of_mentor: number;
+  big_rank_of_little: number;
+  little_rank_of_big: number;
 };
 
 export type MatchRun = {

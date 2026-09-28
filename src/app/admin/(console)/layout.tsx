@@ -22,7 +22,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       <header className="border-b border-line bg-card">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3">
           <Link href="/admin" className="text-sm font-semibold tracking-tight">
-            Mentor–Mentee Matching
+            Big–Little Matching
           </Link>
           <nav className="flex flex-1 flex-wrap gap-x-4 gap-y-1 text-sm">
             {NAV.map((item) => (

@@ -34,7 +34,7 @@ export function mulberry32(seed: number) {
 }
 
 export function syntheticCohort(
-  role: "mentor" | "mentee",
+  role: "big" | "little",
   count: number,
   seed: number,
 ): MatchParticipant[] {
@@ -53,7 +53,7 @@ export function syntheticCohort(
 
     return {
       id: `${role}-${i}`,
-      name: `${role === "mentor" ? "Mentor" : "Mentee"} ${i}`,
+      name: `${role === "big" ? "Big" : "Little"} ${i}`,
       email: `${role}${i}@example.test`,
       role,
       display_number: i + 1,

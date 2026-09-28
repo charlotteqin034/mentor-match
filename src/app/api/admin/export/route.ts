@@ -52,15 +52,15 @@ export async function GET(request: Request) {
 
     const byId = new Map(participants.map((p) => [p.id, p]));
     const csv = toCsv(
-      ["mentor_name", "mentor_email", "mentee_name", "mentee_email", "score"],
+      ["big_name", "big_email", "little_name", "little_email", "score"],
       run.results.map((r) => {
-        const mentor = byId.get(r.mentor_id);
-        const mentee = byId.get(r.mentee_id);
+        const big = byId.get(r.big_id);
+        const little = byId.get(r.little_id);
         return [
-          mentor?.name ?? "(removed)",
-          mentor?.email ?? "",
-          mentee?.name ?? "(removed)",
-          mentee?.email ?? "",
+          big?.name ?? "(removed)",
+          big?.email ?? "",
+          little?.name ?? "(removed)",
+          little?.email ?? "",
           r.total.toFixed(4),
         ];
       }),
